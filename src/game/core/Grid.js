@@ -11,6 +11,7 @@ const Grid = {
           building: null,
           buildingType: null,
           villagers: 0,
+          occupants: 0,
           capacity: 0,
           isUnderConstruction: false,
           data: {},

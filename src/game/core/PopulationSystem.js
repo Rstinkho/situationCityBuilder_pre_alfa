@@ -9,6 +9,7 @@ const PopulationSystem = {
       const { cell } = this.findHouseWithSpace(scene);
       if (!cell) return;
       cell.villagers += 1;
+      cell.occupants += 1;
       GameModel.population.current += 1;
     });
   },
@@ -21,7 +22,7 @@ const PopulationSystem = {
         if (
           cell.buildingType === "house" &&
           cell.root === cell &&
-          cell.villagers < HOUSE_CAPACITY
+          cell.occupants < HOUSE_CAPACITY
         ) {
           return { x, y, cell };
         }

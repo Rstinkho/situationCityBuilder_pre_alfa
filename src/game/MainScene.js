@@ -14,7 +14,7 @@ export default class MainScene extends Phaser.Scene {
   }
 
   init() {
-    this.reactCallback = (payload) => EventBus.emit("hud-payload", payload);
+    this.reactCallback = (payload) => EventBus.emit("open-building-ui", payload);
   }
 
   create() {

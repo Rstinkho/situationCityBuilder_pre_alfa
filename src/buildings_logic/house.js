@@ -1,5 +1,6 @@
 import GameModel from "../game/core/GameModel";
-import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE } from "../game/core/constants";
+import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE, GOLD_PAYOUT_EVERY_MS, HOUSE_FULL_INCOME } from "../game/core/constants";
+import EventBus from "../game/events/eventBus";
 
 export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
@@ -21,6 +22,7 @@ export function init(scene, grid, x, y) {
   root.isUnderConstruction = false;
   root.width = w;
   root.height = h;
+  root.occupants = 0;
 
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
@@ -32,6 +34,7 @@ export function init(scene, grid, x, y) {
       if (cell !== root) {
         cell.capacity = 0;
         cell.villagers = 0;
+        cell.occupants = 0;
       }
     }
   }
@@ -39,7 +42,7 @@ export function init(scene, grid, x, y) {
   rect.on("pointerdown", () => {
     if (root.isUnderConstruction) return;
     const payload = getClickPayload(root);
-    scene.reactCallback?.(payload);
+    EventBus.emit("open-building-ui", payload);
   });
 
   return rect;
@@ -48,13 +51,15 @@ export function init(scene, grid, x, y) {
 export function loop(_scene, _cell, _dt) {}
 
 export function getClickPayload(cell) {
-  const income = cell.villagers === HOUSE_CAPACITY ? 0.1 : 0;
+  const incomePerInterval = cell.occupants === HOUSE_CAPACITY ? HOUSE_FULL_INCOME : 0;
   return {
     type: "house",
     built: true,
+    occupants: cell.occupants,
     villagers: cell.villagers,
     capacity: HOUSE_CAPACITY,
-    income,
+    incomePerInterval,
+    incomeIntervalMs: GOLD_PAYOUT_EVERY_MS,
   };
 }
 
@@ -71,6 +76,7 @@ export function remove(scene, cell) {
       c.root = null;
       c.capacity = 0;
       c.villagers = 0;
+      c.occupants = 0;
       c.isUnderConstruction = false;
     }
   }
