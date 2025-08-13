@@ -7,6 +7,7 @@ import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
 import { TILE_SIZE } from "./core/constants";
+import { setTargetTile as setLumberTarget } from "../buildings_logic/lumberyard";
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -21,9 +22,18 @@ export default class MainScene extends Phaser.Scene {
 
   create() {
     GameModel.gridData = Grid.createGrid(this);
+    window.__phaserScene = this;
 
     Pointer.init(this);
-    this.input.on("pointerdown", (p) => handlePointerDown(this, p));
+    this.input.on("pointerdown", (p) => {
+      if (window.__pickLumberTile) {
+        const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
+        const ok = setLumberTarget(this, window.__pickLumberTile.x, window.__pickLumberTile.y, cx, cy);
+        window.__pickLumberTile = null;
+        return;
+      }
+      handlePointerDown(this, p);
+    });
 
     PopulationSystem.start(this);
     ResourceSystem.start(this);
