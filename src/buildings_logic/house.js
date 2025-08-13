@@ -21,6 +21,7 @@ export function init(scene, grid, x, y) {
   root.isUnderConstruction = false;
   root.width = w;
   root.height = h;
+  root.occupants = 0;
 
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
@@ -32,6 +33,7 @@ export function init(scene, grid, x, y) {
       if (cell !== root) {
         cell.capacity = 0;
         cell.villagers = 0;
+        cell.occupants = 0;
       }
     }
   }
@@ -48,7 +50,7 @@ export function init(scene, grid, x, y) {
 export function loop(_scene, _cell, _dt) {}
 
 export function getClickPayload(cell) {
-  const income = cell.villagers === HOUSE_CAPACITY ? 0.1 : 0;
+  const income = cell.occupants === HOUSE_CAPACITY ? 0.1 : 0;
   return {
     type: "house",
     built: true,
@@ -71,6 +73,7 @@ export function remove(scene, cell) {
       c.root = null;
       c.capacity = 0;
       c.villagers = 0;
+      c.occupants = 0;
       c.isUnderConstruction = false;
     }
   }

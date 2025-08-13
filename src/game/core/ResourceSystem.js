@@ -13,7 +13,7 @@ const ResourceSystem = {
           if (
             cell.buildingType === "house" &&
             cell.root === cell &&
-            cell.villagers === HOUSE_CAPACITY
+            cell.occupants === HOUSE_CAPACITY
           ) {
             fullHouses += 1;
           }

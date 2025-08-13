@@ -1,6 +1,6 @@
-export const TILE_SIZE = 8;
-export const GRID_WIDTH = 128;
-export const GRID_HEIGHT = 80;
+export const TILE_SIZE = 24;
+export const GRID_WIDTH = 66;
+export const GRID_HEIGHT = 42;
 
 export const POPULATION_CAP_START = 10;
 export const HOUSE_CAPACITY = 4;
