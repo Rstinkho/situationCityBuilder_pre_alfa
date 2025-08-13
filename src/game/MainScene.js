@@ -6,11 +6,13 @@ import PopulationSystem from "./core/PopulationSystem";
 import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
+import { TILE_SIZE } from "./core/constants";
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
     super("MainScene");
     this.reactCallback = null;
+    this.tileHint = null;
   }
 
   init() {
@@ -30,7 +32,22 @@ export default class MainScene extends Phaser.Scene {
       PopulationSystem.trainVillager(this, profession);
     });
 
-    this.add.text(12, 12, "1: House  |  2: Training Center  |  Esc: Cancel", { fontSize: 14, color: "#eaeaea" });
+    this.add.text(12, 12, "1: House  |  2: Training Center  |  3: Farm  |  4: Lumberyard  |  Esc: Cancel  |  Shift: Tiles", { fontSize: 14, color: "#eaeaea" });
+
+    this.tileHint = this.add.text(0, 0, "", { fontSize: 12, color: "#ddd" });
+    this.tileHint.setDepth(1000);
+    this.input.keyboard.on("keydown-SHIFT", () => Grid.setTileOverlayVisible(this, true));
+    this.input.keyboard.on("keyup-SHIFT", () => Grid.setTileOverlayVisible(this, false));
+
+    this.input.on("pointermove", (pointer) => {
+      const grid = GameModel.gridData;
+      const cx = Math.max(0, Math.min(grid[0].length - 1, Math.floor(pointer.worldX / TILE_SIZE)));
+      const cy = Math.max(0, Math.min(grid.length - 1, Math.floor(pointer.worldY / TILE_SIZE)));
+      const cell = grid[cy][cx];
+      this.tileHint.setPosition(pointer.worldX + 12, pointer.worldY + 8);
+      this.tileHint.setText(cell?.tileType || "");
+      this.tileHint.setVisible(pointer.event.shiftKey);
+    });
   }
 
   update(time, delta) {

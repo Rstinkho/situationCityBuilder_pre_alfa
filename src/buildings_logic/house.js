@@ -23,6 +23,7 @@ export function init(scene, grid, x, y) {
   root.width = w;
   root.height = h;
   root.occupants = 0;
+  root.occupantDots = [];
 
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
@@ -56,16 +57,32 @@ export function getClickPayload(cell) {
     type: "house",
     built: true,
     occupants: cell.occupants,
-    villagers: cell.villagers,
     capacity: HOUSE_CAPACITY,
     incomePerInterval,
     incomeIntervalMs: GOLD_PAYOUT_EVERY_MS,
   };
 }
 
+export function addOccupantDot(scene, cell) {
+  const root = cell.root || cell;
+  if (!root.occupantDots) root.occupantDots = [];
+  const idx = Math.max(0, Math.min(HOUSE_CAPACITY - 1, root.occupants - 1));
+  const col = idx % 2;
+  const row = Math.floor(idx / 2);
+  const cx = root.x * TILE_SIZE + TILE_SIZE * (0.5 + col);
+  const cy = root.y * TILE_SIZE + TILE_SIZE * (0.5 + row);
+  const r = Math.max(3, Math.floor(TILE_SIZE / 6));
+  const dot = scene.add.circle(cx, cy, r, 0x2ecc71, 1);
+  root.occupantDots.push(dot);
+}
+
 export function remove(scene, cell) {
   const root = cell.root || cell;
   root.building?.destroy();
+  if (root.occupantDots) {
+    root.occupantDots.forEach((d) => d.destroy());
+    root.occupantDots.length = 0;
+  }
   const { width = 1, height = 1 } = root;
   const grid = GameModel.gridData;
   for (let dy = 0; dy < height; dy++) {

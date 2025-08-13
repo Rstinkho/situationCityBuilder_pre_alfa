@@ -1,6 +1,7 @@
 import GameModel from "./GameModel";
 import { HOUSE_CAPACITY, VILLAGER_ARRIVAL_EVERY_MS } from "./constants";
 import TimeSystem from "./TimeSystem";
+import { addOccupantDot } from "../../buildings_logic/house";
 
 const PopulationSystem = {
   start(scene) {
@@ -11,6 +12,7 @@ const PopulationSystem = {
       cell.villagers += 1;
       cell.occupants += 1;
       GameModel.population.current += 1;
+      addOccupantDot(scene, cell);
     });
   },
 

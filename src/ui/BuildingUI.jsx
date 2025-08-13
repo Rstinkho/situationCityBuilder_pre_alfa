@@ -32,8 +32,31 @@ export default function BuildingUI({ open, payload, onClose }) {
           <button onClick={onClose}>✕</button>
         </div>
         <div>Occupants: {payload.occupants}/{payload.capacity}</div>
-        <div>Villagers: {payload.villagers}/{payload.capacity}</div>
         <div>Income: {incomeText}</div>
+      </div>
+    );
+  }
+
+  if (payload.type === "lumberyard") {
+    return (
+      <div style={panelStyle}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+          <strong>Lumberyard</strong>
+          <button onClick={onClose}>✕</button>
+        </div>
+        <div style={{ opacity: 0.8 }}>Coming soon: assign workers and select wood tile.</div>
+      </div>
+    );
+  }
+
+  if (payload.type === "farm") {
+    return (
+      <div style={panelStyle}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+          <strong>Farm</strong>
+          <button onClick={onClose}>✕</button>
+        </div>
+        <div style={{ opacity: 0.8 }}>Coming soon: assign workers and create fields.</div>
       </div>
     );
   }
