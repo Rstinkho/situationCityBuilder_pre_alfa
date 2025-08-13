@@ -1,18 +1,44 @@
-import { HOUSE_CAPACITY, TILE_SIZE } from "../game/core/constants";
+import GameModel from "../game/core/GameModel";
+import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE } from "../game/core/constants";
 
-export function init(scene, cell, x, y) {
-  const rect = scene.add.rectangle(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2, 0x88bbff);
+export function init(scene, grid, x, y) {
+  const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
+  const rect = scene.add.rectangle(
+    x * TILE_SIZE + 1,
+    y * TILE_SIZE + 1,
+    w * TILE_SIZE - 2,
+    h * TILE_SIZE - 2,
+    0x88bbff
+  );
   rect.setOrigin(0, 0);
   rect.setInteractive({ useHandCursor: true });
 
-  cell.building = rect;
-  cell.buildingType = "house";
-  cell.capacity = HOUSE_CAPACITY;
-  cell.isUnderConstruction = false;
+  const root = grid[y][x];
+  root.building = rect;
+  root.buildingType = BUILDING_TYPES.HOUSE;
+  root.root = root;
+  root.capacity = HOUSE_CAPACITY;
+  root.isUnderConstruction = false;
+  root.width = w;
+  root.height = h;
+
+  for (let dy = 0; dy < h; dy++) {
+    for (let dx = 0; dx < w; dx++) {
+      const cell = grid[y + dy][x + dx];
+      cell.building = rect;
+      cell.buildingType = BUILDING_TYPES.HOUSE;
+      cell.root = root;
+      cell.isUnderConstruction = false;
+      if (cell !== root) {
+        cell.capacity = 0;
+        cell.villagers = 0;
+      }
+    }
+  }
 
   rect.on("pointerdown", () => {
-    if (cell.isUnderConstruction) return;
-    const payload = getClickPayload(cell);
+    if (root.isUnderConstruction) return;
+    const payload = getClickPayload(root);
     scene.reactCallback?.(payload);
   });
 
@@ -33,8 +59,19 @@ export function getClickPayload(cell) {
 }
 
 export function remove(scene, cell) {
-  cell.building?.destroy();
-  cell.building = null;
-  cell.buildingType = null;
-  cell.capacity = 0;
+  const root = cell.root || cell;
+  root.building?.destroy();
+  const { width = 1, height = 1 } = root;
+  const grid = GameModel.gridData;
+  for (let dy = 0; dy < height; dy++) {
+    for (let dx = 0; dx < width; dx++) {
+      const c = grid[root.y + dy][root.x + dx];
+      c.building = null;
+      c.buildingType = null;
+      c.root = null;
+      c.capacity = 0;
+      c.villagers = 0;
+      c.isUnderConstruction = false;
+    }
+  }
 }

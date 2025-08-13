@@ -18,7 +18,11 @@ const PopulationSystem = {
     for (let y = 0; y < grid.length; y++) {
       for (let x = 0; x < grid[0].length; x++) {
         const cell = grid[y][x];
-        if (cell.buildingType === "house" && cell.villagers < HOUSE_CAPACITY) {
+        if (
+          cell.buildingType === "house" &&
+          cell.root === cell &&
+          cell.villagers < HOUSE_CAPACITY
+        ) {
           return { x, y, cell };
         }
       }
@@ -31,7 +35,7 @@ const PopulationSystem = {
     for (let y = 0; y < grid.length; y++) {
       for (let x = 0; x < grid[0].length; x++) {
         const cell = grid[y][x];
-        if (cell.buildingType === "house" && cell.villagers > 0) {
+        if (cell.buildingType === "house" && cell.root === cell && cell.villagers > 0) {
           cell.villagers -= 1;
           GameModel.professions[professionKey] += 1;
           return true;

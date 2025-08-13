@@ -10,7 +10,11 @@ const ResourceSystem = {
       for (let y = 0; y < grid.length; y++) {
         for (let x = 0; x < grid[0].length; x++) {
           const cell = grid[y][x];
-          if (cell.buildingType === "house" && cell.villagers === HOUSE_CAPACITY) {
+          if (
+            cell.buildingType === "house" &&
+            cell.root === cell &&
+            cell.villagers === HOUSE_CAPACITY
+          ) {
             fullHouses += 1;
           }
         }
