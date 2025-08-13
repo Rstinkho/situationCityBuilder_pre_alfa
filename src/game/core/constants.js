@@ -9,12 +9,26 @@ export const VILLAGER_ARRIVAL_EVERY_MS = 3000;
 export const GOLD_PAYOUT_EVERY_MS = 10000;
 export const HOUSE_FULL_INCOME = 0.1;
 
+export const TILE_TYPES = {
+  PLAINS: "plains",
+  WATER: "water",
+  FOREST: "forest",
+  MOUNTAIN: "mountain",
+};
+
 export const BUILDING_TYPES = {
   HOUSE: "house",
   TRAINING_CENTER: "training_center",
+  LUMBERYARD: "lumberyard",
+  FARM: "farm",
 };
 
 export const BUILDING_SIZES = {
   [BUILDING_TYPES.HOUSE]: { w: 2, h: 2 },
   [BUILDING_TYPES.TRAINING_CENTER]: { w: 3, h: 2 },
+  [BUILDING_TYPES.LUMBERYARD]: { w: 2, h: 2 },
+  [BUILDING_TYPES.FARM]: { w: 2, h: 2 },
 };
+
+export const LUMBER_PER_100_EFF_MS = 20000;
+export const LUMBERYARD_NEARBY_RADIUS = 3; // tiles

@@ -11,6 +11,8 @@ const Pointer = {
 
     scene.input.keyboard.on("keydown-ONE", () => this.setSelected(scene, BUILDING_TYPES.HOUSE));
     scene.input.keyboard.on("keydown-TWO", () => this.setSelected(scene, BUILDING_TYPES.TRAINING_CENTER));
+    scene.input.keyboard.on("keydown-THREE", () => this.setSelected(scene, BUILDING_TYPES.FARM));
+    scene.input.keyboard.on("keydown-FOUR", () => this.setSelected(scene, BUILDING_TYPES.LUMBERYARD));
     scene.input.keyboard.on("keydown-ESC", () => this.clear(scene));
 
     scene.input.on("pointermove", (pointer) => {
