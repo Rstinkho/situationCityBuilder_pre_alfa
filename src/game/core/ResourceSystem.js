@@ -34,7 +34,8 @@ const ResourceSystem = {
             fullHouses += 1;
             const worldX = x * TILE_SIZE + (cell.width ? (cell.width * TILE_SIZE) / 2 : TILE_SIZE / 2);
             const worldY = y * TILE_SIZE - 6;
-            showFloatingText(scene, worldX, worldY, `+${HOUSE_FULL_INCOME} gold`);
+            const formattedIncome = HOUSE_FULL_INCOME.toFixed(1).replace(".", ",");
+            showFloatingText(scene, worldX, worldY, `+${formattedIncome} gold`);
           }
         }
       }

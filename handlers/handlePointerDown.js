@@ -4,6 +4,7 @@ import Pointer from "../src/game/core/Pointer";
 import { BUILDING_TYPES, BUILDING_SIZES } from "../src/game/core/constants";
 import * as House from "../src/buildings_logic/house";
 import * as TrainingCenter from "../src/buildings_logic/training_center";
+import EventBus from "../src/game/events/eventBus";
 
 export default function handlePointerDown(scene, pointer) {
   const { cx, cy } = Grid.worldToCell(pointer.worldX, pointer.worldY);
@@ -37,7 +38,7 @@ export default function handlePointerDown(scene, pointer) {
         ? TrainingCenter.getClickPayload(target)
         : null;
 
-    if (payload) scene.reactCallback?.(payload);
+    if (payload) EventBus.emit("open-building-ui", payload);
   }
 }
 

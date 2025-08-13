@@ -1,5 +1,6 @@
 import GameModel from "../game/core/GameModel";
 import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE, GOLD_PAYOUT_EVERY_MS, HOUSE_FULL_INCOME } from "../game/core/constants";
+import EventBus from "../game/events/eventBus";
 
 export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
@@ -41,7 +42,7 @@ export function init(scene, grid, x, y) {
   rect.on("pointerdown", () => {
     if (root.isUnderConstruction) return;
     const payload = getClickPayload(root);
-    scene.reactCallback?.(payload);
+    EventBus.emit("open-building-ui", payload);
   });
 
   return rect;
