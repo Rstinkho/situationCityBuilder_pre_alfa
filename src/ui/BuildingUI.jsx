@@ -22,14 +22,18 @@ export default function BuildingUI({ open, payload, onClose }) {
   }
 
   if (payload.type === "house") {
+    const incomeText = payload.incomePerInterval > 0
+      ? `+${payload.incomePerInterval} gold every ${Math.round(payload.incomeIntervalMs / 1000)}s`
+      : `No income until full`;
     return (
       <div style={panelStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
           <strong>House</strong>
           <button onClick={onClose}>✕</button>
         </div>
+        <div>Occupants: {payload.occupants}/{payload.capacity}</div>
         <div>Villagers: {payload.villagers}/{payload.capacity}</div>
-        <div>Income when full: +{payload.income} gold/10s</div>
+        <div>Income: {incomeText}</div>
       </div>
     );
   }

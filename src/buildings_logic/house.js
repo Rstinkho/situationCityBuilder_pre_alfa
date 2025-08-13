@@ -1,5 +1,5 @@
 import GameModel from "../game/core/GameModel";
-import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE } from "../game/core/constants";
+import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE, GOLD_PAYOUT_EVERY_MS, HOUSE_FULL_INCOME } from "../game/core/constants";
 
 export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
@@ -50,13 +50,15 @@ export function init(scene, grid, x, y) {
 export function loop(_scene, _cell, _dt) {}
 
 export function getClickPayload(cell) {
-  const income = cell.occupants === HOUSE_CAPACITY ? 0.1 : 0;
+  const incomePerInterval = cell.occupants === HOUSE_CAPACITY ? HOUSE_FULL_INCOME : 0;
   return {
     type: "house",
     built: true,
+    occupants: cell.occupants,
     villagers: cell.villagers,
     capacity: HOUSE_CAPACITY,
-    income,
+    incomePerInterval,
+    incomeIntervalMs: GOLD_PAYOUT_EVERY_MS,
   };
 }
 
