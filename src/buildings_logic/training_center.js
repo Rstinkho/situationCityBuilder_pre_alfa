@@ -1,18 +1,40 @@
-import { TILE_SIZE } from "../game/core/constants";
+import GameModel from "../game/core/GameModel";
+import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE } from "../game/core/constants";
 import EventBus from "../game/events/eventBus";
 
-export function init(scene, cell, x, y) {
-  const rect = scene.add.rectangle(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2, 0xffd37a);
+export function init(scene, grid, x, y) {
+  const { w, h } = BUILDING_SIZES[BUILDING_TYPES.TRAINING_CENTER];
+  const rect = scene.add.rectangle(
+    x * TILE_SIZE + 1,
+    y * TILE_SIZE + 1,
+    w * TILE_SIZE - 2,
+    h * TILE_SIZE - 2,
+    0xffd37a
+  );
   rect.setOrigin(0, 0);
   rect.setInteractive({ useHandCursor: true });
 
-  cell.building = rect;
-  cell.buildingType = "training_center";
-  cell.isUnderConstruction = false;
+  const root = grid[y][x];
+  root.building = rect;
+  root.buildingType = BUILDING_TYPES.TRAINING_CENTER;
+  root.root = root;
+  root.isUnderConstruction = false;
+  root.width = w;
+  root.height = h;
+
+  for (let dy = 0; dy < h; dy++) {
+    for (let dx = 0; dx < w; dx++) {
+      const cell = grid[y + dy][x + dx];
+      cell.building = rect;
+      cell.buildingType = BUILDING_TYPES.TRAINING_CENTER;
+      cell.root = root;
+      cell.isUnderConstruction = false;
+    }
+  }
 
   rect.on("pointerdown", () => {
-    if (cell.isUnderConstruction) return;
-    EventBus.emit("open-building-ui", getClickPayload(cell));
+    if (root.isUnderConstruction) return;
+    EventBus.emit("open-building-ui", getClickPayload(root));
   });
 
   return rect;
@@ -31,7 +53,17 @@ export function getClickPayload(_cell) {
 }
 
 export function remove(scene, cell) {
-  cell.building?.destroy();
-  cell.building = null;
-  cell.buildingType = null;
+  const root = cell.root || cell;
+  root.building?.destroy();
+  const { width = 1, height = 1 } = root;
+  const grid = GameModel.gridData;
+  for (let dy = 0; dy < height; dy++) {
+    for (let dx = 0; dx < width; dx++) {
+      const c = grid[root.y + dy][root.x + dx];
+      c.building = null;
+      c.buildingType = null;
+      c.root = null;
+      c.isUnderConstruction = false;
+    }
+  }
 }

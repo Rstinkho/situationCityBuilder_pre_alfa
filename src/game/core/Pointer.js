@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, TILE_SIZE } from "./constants";
+import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE } from "./constants";
 
 const Pointer = {
   selected: null,
@@ -22,6 +22,8 @@ const Pointer = {
 
   setSelected(scene, type) {
     this.selected = type;
+    const { w, h } = BUILDING_SIZES[type];
+    this.preview.setSize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
     this.preview.setVisible(true);
     scene.input.setDefaultCursor("crosshair");
   },
