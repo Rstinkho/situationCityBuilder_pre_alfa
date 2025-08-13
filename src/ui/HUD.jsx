@@ -1,0 +1,43 @@
+import React, { useEffect, useState } from "react";
+import EventBus from "../game/events/eventBus";
+import GameModel from "../game/core/GameModel";
+
+export default function HUD() {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const off = EventBus.on("hud-payload", () => {});
+    return off;
+  }, []);
+
+  const p = GameModel.population;
+  const prof = GameModel.professions;
+  const res = GameModel.resources;
+
+  return (
+    <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.5)", color: "#fff", padding: "8px 12px", borderRadius: 8, fontFamily: "sans-serif", fontSize: 14 }}>
+      <div><strong>Gold:</strong> {GameModel.gold.toFixed(2)}</div>
+      <div><strong>Population:</strong> {p.current}/{p.cap}</div>
+      <div><strong>Free at home:</strong> {countFreeVillagers()}</div>
+      <div><strong>Farmers:</strong> {prof.farmer} &nbsp; <strong>Foresters:</strong> {prof.forester}</div>
+      <div><strong>Wheat:</strong> {res.wheat} &nbsp; <strong>Wood:</strong> {res.wood}</div>
+    </div>
+  );
+}
+
+function countFreeVillagers() {
+  const grid = GameModel.gridData || [];
+  let n = 0;
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < (grid[0]?.length || 0); x++) {
+      const cell = grid[y][x];
+      if (cell.buildingType === "house") n += cell.villagers;
+    }
+  }
+  return n;
+}
