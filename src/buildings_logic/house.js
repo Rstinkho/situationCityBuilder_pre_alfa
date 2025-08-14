@@ -6,15 +6,18 @@ import * as Farm from "./farm";
 
 export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
-  const rect = scene.add.rectangle(
-    x * TILE_SIZE + 1,
-    y * TILE_SIZE + 1,
-    w * TILE_SIZE - 2,
-    h * TILE_SIZE - 2,
-    0x88bbff
-  );
-  rect.setOrigin(0, 0);
+  // Use image frames (mocked with rectangles plus frame change is complex without loader; use Image as texture)
+  const rootX = x * TILE_SIZE + 1;
+  const rootY = y * TILE_SIZE + 1;
+  const rect = scene.add.image(rootX + (w * TILE_SIZE - 2) / 2, rootY + (h * TILE_SIZE - 2) / 2, "house_frame_1");
+  rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
+  rect.setOrigin(0.5, 0.5);
   rect.setInteractive({ useHandCursor: true });
+
+  // naive animation by swapping texture names if available
+  const frames = ["house_frame_1", "house_frame_2", "house_frame_3"];
+  let fi = 0;
+  scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
 
   const root = grid[y][x];
   root.building = rect;

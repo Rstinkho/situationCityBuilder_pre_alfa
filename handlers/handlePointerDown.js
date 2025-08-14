@@ -1,7 +1,7 @@
 import Grid from "../src/game/core/Grid";
 import GameModel from "../src/game/core/GameModel";
 import Pointer from "../src/game/core/Pointer";
-import { BUILDING_TYPES, BUILDING_SIZES, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS } from "../src/game/core/constants";
+import { BUILDING_TYPES, BUILDING_SIZES, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, BUILDING_COSTS } from "../src/game/core/constants";
 import * as House from "../src/buildings_logic/house";
 import * as TrainingCenter from "../src/buildings_logic/training_center";
 import * as Lumberyard from "../src/buildings_logic/lumberyard";
@@ -15,20 +15,29 @@ export default function handlePointerDown(scene, pointer) {
 
 	if (Pointer.selected) {
 		const { w, h } = BUILDING_SIZES[Pointer.selected];
+		const cost = BUILDING_COSTS[Pointer.selected] || 0;
+		if (GameModel.gold < cost) {
+			Pointer.clear(scene);
+			return;
+		}
 		if (canPlaceOnPlains(grid, cx, cy, w, h) && canPlace(grid, cx, cy, w, h)) {
 			switch (Pointer.selected) {
 				case BUILDING_TYPES.HOUSE:
+					GameModel.gold -= cost;
 					House.init(scene, grid, cx, cy);
 					break;
 				case BUILDING_TYPES.TRAINING_CENTER:
+					GameModel.gold -= cost;
 					TrainingCenter.init(scene, grid, cx, cy);
 					break;
 				case BUILDING_TYPES.LUMBERYARD:
 					if (isAdjacentToTileType(grid, cx, cy, w, h, TILE_TYPES.FOREST)) {
+						GameModel.gold -= cost;
 						Lumberyard.init(scene, grid, cx, cy);
 					}
 					break;
 				case BUILDING_TYPES.FARM:
+					GameModel.gold -= cost;
 					Farm.init(scene, grid, cx, cy);
 					break;
 				default:
