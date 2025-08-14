@@ -21,6 +21,7 @@ export const BUILDING_TYPES = {
   TRAINING_CENTER: "training_center",
   LUMBERYARD: "lumberyard",
   FARM: "farm",
+  FARM_FIELD: "farm_field",
 };
 
 export const BUILDING_SIZES = {
@@ -28,7 +29,9 @@ export const BUILDING_SIZES = {
   [BUILDING_TYPES.TRAINING_CENTER]: { w: 3, h: 2 },
   [BUILDING_TYPES.LUMBERYARD]: { w: 2, h: 2 },
   [BUILDING_TYPES.FARM]: { w: 2, h: 2 },
+  [BUILDING_TYPES.FARM_FIELD]: { w: 1, h: 1 },
 };
 
 export const LUMBER_PER_100_EFF_MS = 20000;
 export const LUMBERYARD_NEARBY_RADIUS = 3; // tiles
+export const FARM_PER_100_EFF_MS = 20000;
