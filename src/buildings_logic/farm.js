@@ -65,15 +65,14 @@ export function assignWorker(scene, x, y, workerType) {
 	if (workers.length >= 2) return false;
 
 	if (workerType === "villager") {
-		const house = findHouseWithVillager();
+		const house = findHouseWithVillagerAvailable();
 		if (!house) return false;
-		house.villagers -= 1;
+		house.employed.villager = (house.employed.villager || 0) + 1;
 		workers.push({ type: "villager", home: { x: house.x, y: house.y } });
 	} else if (workerType === "farmer") {
-		const house = findHouseWithProfessional("farmer");
+		const house = findHouseWithProfessionalAvailable("farmer");
 		if (!house) return false;
-		house.professionCounts.farmer -= 1;
-		GameModel.professions.farmer -= 1;
+		house.employed.farmer = (house.employed.farmer || 0) + 1;
 		workers.push({ type: "farmer", home: { x: house.x, y: house.y } });
 	} else {
 		return false;
@@ -91,13 +90,10 @@ export function unassignLastWorker(scene, x, y) {
 	if (workers.length === 0) return false;
 	const worker = workers.pop();
 
-	if (worker.type === "villager") {
-		const home = getHouseByCoords(worker.home);
-		if (home) home.villagers += 1; else addVillagerToAnyHouse();
-	} else if (worker.type === "farmer") {
-		const home = getHouseByCoords(worker.home);
-		if (home) home.professionCounts.farmer += 1;
-		GameModel.professions.farmer += 1;
+	const home = getHouseByCoords(worker.home);
+	if (home) {
+		if (worker.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+		if (worker.type === "farmer") home.employed.farmer = Math.max(0, (home.employed.farmer || 0) - 1);
 	}
 
 	updateProductionTimer(scene, root);
@@ -149,13 +145,10 @@ export function remove(scene, cell) {
 	const workers = root.data?.workers || [];
 	while (workers.length) {
 		const w = workers.pop();
-		if (w.type === "villager") {
-			const home = getHouseByCoords(w.home);
-			if (home) home.villagers += 1; else addVillagerToAnyHouse();
-		} else if (w.type === "farmer") {
-			const home = getHouseByCoords(w.home);
-			if (home) home.professionCounts.farmer += 1;
-			GameModel.professions.farmer += 1;
+		const home = getHouseByCoords(w.home);
+		if (home) {
+			if (w.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+			if (w.type === "farmer") home.employed.farmer = Math.max(0, (home.employed.farmer || 0) - 1);
 		}
 	}
 	if (root.data?.productionTimer) {
@@ -221,26 +214,29 @@ function updateProductionTimer(scene, root) {
 	root.data.productionTimer = t;
 }
 
-function findHouseWithVillager() {
+function findHouseWithVillagerAvailable() {
 	const grid = GameModel.gridData;
 	for (let y = 0; y < grid.length; y++) {
 		for (let x = 0; x < grid[0].length; x++) {
 			const cell = grid[y][x];
-			if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell && cell.villagers > 0) {
-				return cell;
+			if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) {
+				const free = cell.villagers - (cell.employed?.villager || 0);
+				if (free > 0) return cell;
 			}
 		}
 	}
 	return null;
 }
 
-function findHouseWithProfessional(key) {
+function findHouseWithProfessionalAvailable(key) {
 	const grid = GameModel.gridData;
 	for (let y = 0; y < grid.length; y++) {
 		for (let x = 0; x < grid[0].length; x++) {
 			const cell = grid[y][x];
-			if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell && cell.professionCounts?.[key] > 0) {
-				return cell;
+			if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) {
+				const total = cell.professionCounts?.[key] || 0;
+				const employed = cell.employed?.[key] || 0;
+				if (total - employed > 0) return cell;
 			}
 		}
 	}
@@ -253,18 +249,4 @@ function getHouseByCoords(home) {
 	const cell = grid[home.y]?.[home.x];
 	if (cell && cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) return cell;
 	return null;
-}
-
-function addVillagerToAnyHouse() {
-	const grid = GameModel.gridData;
-	for (let y = 0; y < grid.length; y++) {
-		for (let x = 0; x < grid[0].length; x++) {
-			const cell = grid[y][x];
-			if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell && cell.villagers < cell.capacity) {
-				cell.villagers += 1;
-				return true;
-			}
-		}
-	}
-	return false;
 }
