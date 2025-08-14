@@ -67,16 +67,15 @@ export function assignWorker(scene, x, y, workerType) {
   if (workers.length >= 2) return false;
 
   if (workerType === "villager") {
-    const house = findHouseWithVillager();
+    const house = findHouseWithVillagerAvailable();
     if (!house) return false;
-    house.villagers -= 1;
+    // villager stays a villager, mark employed
+    house.employed.villager = (house.employed.villager || 0) + 1;
     workers.push({ type: "villager", home: { x: house.x, y: house.y } });
   } else if (workerType === "forester") {
-    const house = findHouseWithProfessional("forester");
+    const house = findHouseWithProfessionalAvailable("forester");
     if (!house) return false;
-    // Take one free forester from that house
-    house.professionCounts.forester -= 1;
-    GameModel.professions.forester -= 1;
+    house.employed.forester = (house.employed.forester || 0) + 1;
     workers.push({ type: "forester", home: { x: house.x, y: house.y } });
   } else {
     return false;
@@ -94,13 +93,10 @@ export function unassignLastWorker(scene, x, y) {
   if (workers.length === 0) return false;
   const worker = workers.pop();
 
-  if (worker.type === "villager") {
-    const home = getHouseByCoords(worker.home);
-    if (home) home.villagers += 1; else addVillagerToAnyHouse();
-  } else if (worker.type === "forester") {
-    const home = getHouseByCoords(worker.home);
-    if (home) home.professionCounts.forester += 1;
-    GameModel.professions.forester += 1;
+  const home = getHouseByCoords(worker.home);
+  if (home) {
+    if (worker.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+    if (worker.type === "forester") home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
   }
 
   updateProductionTimer(scene, root);
@@ -138,25 +134,19 @@ export function clearTargetTile(scene, x, y) {
 
 export function remove(scene, cell) {
   const root = cell.root || cell;
-  // release all workers back to pool
   const workers = root.data?.workers || [];
   while (workers.length) {
     const w = workers.pop();
-    if (w.type === "villager") {
-      const home = getHouseByCoords(w.home);
-      if (home) home.villagers += 1; else addVillagerToAnyHouse();
-    } else if (w.type === "forester") {
-      const home = getHouseByCoords(w.home);
-      if (home) home.professionCounts.forester += 1;
-      GameModel.professions.forester += 1;
+    const home = getHouseByCoords(w.home);
+    if (home) {
+      if (w.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+      if (w.type === "forester") home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
     }
   }
-  // stop production
   if (root.data?.productionTimer) {
     root.data.productionTimer.remove(false);
     root.data.productionTimer = null;
   }
-  // destroy visuals and clear cells
   root.building?.destroy();
   const grid = GameModel.gridData;
   const { width = 1, height = 1 } = root;
@@ -207,26 +197,29 @@ function withinRadius(bx, by, tx, ty, r) {
   return dx * dx + dy * dy <= r * r;
 }
 
-function findHouseWithVillager() {
+function findHouseWithVillagerAvailable() {
   const grid = GameModel.gridData;
   for (let y = 0; y < grid.length; y++) {
     for (let x = 0; x < grid[0].length; x++) {
       const cell = grid[y][x];
-      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell && cell.villagers > 0) {
-        return cell;
+      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) {
+        const free = cell.villagers - (cell.employed?.villager || 0);
+        if (free > 0) return cell;
       }
     }
   }
   return null;
 }
 
-function findHouseWithProfessional(key) {
+function findHouseWithProfessionalAvailable(key) {
   const grid = GameModel.gridData;
   for (let y = 0; y < grid.length; y++) {
     for (let x = 0; x < grid[0].length; x++) {
       const cell = grid[y][x];
-      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell && cell.professionCounts?.[key] > 0) {
-        return cell;
+      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) {
+        const total = cell.professionCounts?.[key] || 0;
+        const employed = cell.employed?.[key] || 0;
+        if (total - employed > 0) return cell;
       }
     }
   }
@@ -239,18 +232,4 @@ function getHouseByCoords(home) {
   const cell = grid[home.y]?.[home.x];
   if (cell && cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) return cell;
   return null;
-}
-
-function addVillagerToAnyHouse() {
-  const grid = GameModel.gridData;
-  for (let y = 0; y < grid.length; y++) {
-    for (let x = 0; x < grid[0].length; x++) {
-      const cell = grid[y][x];
-      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell && cell.villagers < cell.capacity) {
-        cell.villagers += 1;
-        return true;
-      }
-    }
-  }
-  return false;
 }

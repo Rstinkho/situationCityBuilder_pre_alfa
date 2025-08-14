@@ -28,6 +28,7 @@ export function init(scene, grid, x, y) {
   root.villagers = 0;
   root.professionCounts = { farmer: 0, forester: 0 };
   root.assigned = { villager: 0, farmer: 0, forester: 0 };
+  root.employed = { villager: 0, farmer: 0, forester: 0 };
   root.incoming = 0;
   root.occupantDots = [];
   root.arrivalDots = [];
@@ -133,7 +134,9 @@ export function remove(scene, cell) {
         const kept = [];
         for (const w of c.data.workers) {
           if (w.home && w.home.x === root.x && w.home.y === root.y) {
-            // drop this worker
+            // decrement employed for this house
+            if (w.type === "villager") root.employed.villager = Math.max(0, (root.employed.villager || 0) - 1);
+            if (w.type === "forester") root.employed.forester = Math.max(0, (root.employed.forester || 0) - 1);
           } else {
             kept.push(w);
           }
@@ -147,7 +150,8 @@ export function remove(scene, cell) {
         const kept = [];
         for (const w of c.data.workers) {
           if (w.home && w.home.x === root.x && w.home.y === root.y) {
-            // drop this worker
+            if (w.type === "villager") root.employed.villager = Math.max(0, (root.employed.villager || 0) - 1);
+            if (w.type === "farmer") root.employed.farmer = Math.max(0, (root.employed.farmer || 0) - 1);
           } else {
             kept.push(w);
           }
