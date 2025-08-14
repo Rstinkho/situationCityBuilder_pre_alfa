@@ -5,6 +5,7 @@ import { TILE_SIZE, TILE_TYPES } from "../game/core/constants";
 import * as Lumberyard from "../buildings_logic/lumberyard";
 import * as House from "../buildings_logic/house";
 import * as Farm from "../buildings_logic/farm";
+import * as TrainingCenter from "../buildings_logic/training_center";
 
 export default function BuildingUI({ open, payload, onClose }) {
   const [data, setData] = useState(payload);
@@ -26,6 +27,9 @@ export default function BuildingUI({ open, payload, onClose }) {
       } else if (data.type === "farm") {
         const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
         if (root) setData(Farm.getClickPayload(root));
+      } else if (data.type === "training_center") {
+        const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
+        if (root) setData(TrainingCenter.getClickPayload(root));
       }
     }, 500);
     return () => clearInterval(id);
@@ -186,7 +190,7 @@ function destroyBuilding(data, onClose) {
   } else if (data.type === "farm") {
     destroyFarm(root);
   } else if (data.type === "training_center") {
-    destroyGenericBuilding(root);
+    TrainingCenter.remove(window.__phaserScene, root);
   }
   onClose();
 }
