@@ -5,15 +5,16 @@ import TimeSystem from "../game/core/TimeSystem";
 
 export function init(scene, grid, x, y) {
 	const { w, h } = BUILDING_SIZES[BUILDING_TYPES.FARM];
-	const rect = scene.add.rectangle(
-		x * TILE_SIZE + 1,
-		y * TILE_SIZE + 1,
-		w * TILE_SIZE - 2,
-		h * TILE_SIZE - 2,
-		0xa8d08d
-	);
-	rect.setOrigin(0, 0);
+	const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
+	const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
+	const rect = scene.add.image(cx, cy, "farm_frame_1");
+	rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
+	rect.setOrigin(0.5, 0.5);
 	rect.setInteractive({ useHandCursor: true });
+
+	const frames = ["farm_frame_1", "farm_frame_2", "farm_frame_3"];
+	let fi = 0;
+	scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
 
 	const root = grid[y][x];
 	root.building = rect;

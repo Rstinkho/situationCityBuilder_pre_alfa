@@ -25,6 +25,8 @@ export default class MainScene extends Phaser.Scene {
     GameModel.gridData = Grid.createGrid(this);
     window.__phaserScene = this;
 
+    this.generateBuildingTextures();
+
     Pointer.init(this);
     this.input.on("pointerdown", (p) => {
       if (window.__pickLumberTile) {
@@ -61,6 +63,29 @@ export default class MainScene extends Phaser.Scene {
     });
 
     this.events.on("update", this.onUpdate, this);
+  }
+
+  generateBuildingTextures() {
+    const defs = [
+      { base: "house", color: 0x88bbff },
+      { base: "training", color: 0xffd37a },
+      { base: "farm", color: 0xa8d08d },
+      { base: "lumber", color: 0xb5651d },
+    ];
+    defs.forEach(({ base, color }) => {
+      for (let i = 1; i <= 3; i++) {
+        const g = this.add.graphics();
+        const w = TILE_SIZE * (base === "training" ? 3 : 2) - 2;
+        const h = TILE_SIZE * 2 - 2;
+        g.fillStyle(color, 1);
+        g.fillRoundedRect(0, 0, w, h, 4);
+        // add a small animated accent varying by frame
+        g.fillStyle(0xffffff, 0.15 * i);
+        g.fillRect(4, 4, Math.max(4, w * 0.3), 6);
+        g.generateTexture(`${base}_frame_${i}`, w, h);
+        g.destroy();
+      }
+    });
   }
 
   onUpdate() {
