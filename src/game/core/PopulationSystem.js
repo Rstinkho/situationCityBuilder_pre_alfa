@@ -37,12 +37,16 @@ const PopulationSystem = {
     for (let y = 0; y < grid.length; y++) {
       for (let x = 0; x < grid[0].length; x++) {
         const cell = grid[y][x];
-        if (cell.buildingType === "house" && cell.root === cell && cell.villagers > 0) {
-          cell.villagers -= 1;
-          const root = cell;
-          root.professionCounts[professionKey] = (root.professionCounts[professionKey] || 0) + 1;
-          GameModel.professions[professionKey] += 1;
-          return true;
+        if (cell.buildingType === "house" && cell.root === cell) {
+          const employedVillagers = cell.employed?.villager || 0;
+          const availableVillagers = cell.villagers - employedVillagers;
+          if (availableVillagers > 0) {
+            cell.villagers -= 1;
+            const root = cell;
+            root.professionCounts[professionKey] = (root.professionCounts[professionKey] || 0) + 1;
+            GameModel.professions[professionKey] += 1;
+            return true;
+          }
         }
       }
     }
