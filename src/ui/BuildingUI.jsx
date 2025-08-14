@@ -119,13 +119,40 @@ export default function BuildingUI({ open, payload, onClose }) {
   }
 
   if (data.type === "farm") {
+    const workers = data.workers || [];
+    const canAssignVillager = workers.length < 2 && GameModel.gridData && hasAnyVillager();
+    const canAssignFarmer = workers.length < 2 && GameModel.professions.farmer > 0;
+    const canUnassign = workers.length > 0;
+    const canCreateFields = workers.length > 0 && (data.fields?.length || 0) < 2;
+
+    const assign = (type) => {
+      Farm.assignWorker(window.__phaserScene, data.rootX, data.rootY, type);
+    };
+    const unassign = () => {
+      Farm.unassignLastWorker(window.__phaserScene, data.rootX, data.rootY);
+    };
+    const createFields = () => {
+      Farm.createFields(window.__phaserScene, data.rootX, data.rootY);
+    };
+
     return (
       <div style={panelStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
           <strong>Farm</strong>
           <button onClick={onClose}>✕</button>
         </div>
-        <div style={{ opacity: 0.8 }}>Coming soon: assign workers and create fields.</div>
+        <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
+        <div>Efficiency: {data.efficiency}%</div>
+        <div>Fields: {(data.fields?.length || 0)}/2</div>
+        <div style={{ marginTop: 8 }}>
+          <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>Assign villager (+15%)</button>
+          <button style={btnStyle} disabled={!canAssignFarmer} onClick={() => assign("farmer")}>Assign farmer (+50%)</button>
+          <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>Unassign last</button>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <button style={btnStyle} disabled={!canCreateFields} onClick={createFields}>Create fields (2 tiles in front)</button>
+        </div>
+        <p style={{ marginTop: 8, opacity: 0.8 }}>Production starts when at least 2 fields are built and workers are assigned. 100% efficiency yields +1 wheat/20s.</p>
       </div>
     );
   }
