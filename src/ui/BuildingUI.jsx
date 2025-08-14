@@ -67,6 +67,7 @@ export default function BuildingUI({ open, payload, onClose }) {
           <button onClick={onClose}>✕</button>
         </div>
         <div>Occupants: {data.occupants}/{data.capacity}</div>
+        <div>Villagers: {data.villagers} &nbsp; Farmers: {data.farmers} &nbsp; Foresters: {data.foresters}</div>
         <div>Income: {incomeText}</div>
       </div>
     );

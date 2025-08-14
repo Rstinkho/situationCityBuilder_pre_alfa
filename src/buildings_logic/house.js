@@ -23,7 +23,11 @@ export function init(scene, grid, x, y) {
   root.width = w;
   root.height = h;
   root.occupants = 0;
+  root.villagers = 0;
+  root.professionCounts = { farmer: 0, forester: 0 };
+  root.incoming = 0;
   root.occupantDots = [];
+  root.arrivalDots = [];
 
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
@@ -57,6 +61,9 @@ export function getClickPayload(cell) {
     type: "house",
     built: true,
     occupants: cell.occupants,
+    villagers: cell.villagers,
+    farmers: cell.professionCounts?.farmer || 0,
+    foresters: cell.professionCounts?.forester || 0,
     capacity: HOUSE_CAPACITY,
     incomePerInterval,
     incomeIntervalMs: GOLD_PAYOUT_EVERY_MS,
@@ -78,12 +85,49 @@ export function addOccupantDot(scene, cell) {
   root.occupantDots.push(dot);
 }
 
+export function spawnArrival(scene, root) {
+  // Reserve capacity for in-flight arrival
+  root.incoming = (root.incoming || 0) + 1;
+  const startX = 1 * TILE_SIZE + TILE_SIZE / 2;
+  const startY = 1 * TILE_SIZE + TILE_SIZE / 2;
+  const r = Math.max(3, Math.floor(TILE_SIZE / 6));
+  const mover = scene.add.circle(startX, startY, r, 0x2ecc71, 1);
+  if (!root.arrivalDots) root.arrivalDots = [];
+  root.arrivalDots.push(mover);
+
+  const targetX = root.x * TILE_SIZE + (root.width * TILE_SIZE) / 2;
+  const targetY = root.y * TILE_SIZE + (root.height * TILE_SIZE) / 2;
+  scene.tweens.add({
+    targets: mover,
+    x: targetX,
+    y: targetY,
+    duration: 2200,
+    ease: "Sine.easeInOut",
+    onComplete: () => {
+      // finalize arrival
+      root.villagers += 1;
+      root.occupants += 1;
+      GameModel.population.current += 1;
+      addOccupantDot(scene, root);
+      // cleanup moving dot
+      mover.destroy();
+      const idx = root.arrivalDots.indexOf(mover);
+      if (idx >= 0) root.arrivalDots.splice(idx, 1);
+      root.incoming = Math.max(0, (root.incoming || 0) - 1);
+    },
+  });
+}
+
 export function remove(scene, cell) {
   const root = cell.root || cell;
   root.building?.destroy();
   if (root.occupantDots) {
     root.occupantDots.forEach((d) => d.destroy());
     root.occupantDots.length = 0;
+  }
+  if (root.arrivalDots) {
+    root.arrivalDots.forEach((d) => d.destroy());
+    root.arrivalDots.length = 0;
   }
   const { width = 1, height = 1 } = root;
   const grid = GameModel.gridData;
