@@ -1,20 +1,52 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import EventBus from "../game/events/eventBus";
 import GameModel from "../game/core/GameModel";
 import { TILE_SIZE, TILE_TYPES } from "../game/core/constants";
 import * as Lumberyard from "../buildings_logic/lumberyard";
+import * as House from "../buildings_logic/house";
+import * as Farm from "../buildings_logic/farm";
 
 export default function BuildingUI({ open, payload, onClose }) {
-  if (!open || !payload) return null;
+  const [data, setData] = useState(payload);
 
-  if (payload.type === "training_center") {
+  useEffect(() => {
+    setData(payload);
+  }, [payload]);
+
+  // live refresh while panel is open
+  useEffect(() => {
+    if (!open || !data) return;
+    const id = setInterval(() => {
+      if (data.type === "house") {
+        const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
+        if (root) setData(House.getClickPayload(root));
+      } else if (data.type === "lumberyard") {
+        const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
+        if (root) setData(Lumberyard.getClickPayload(root));
+      } else if (data.type === "farm") {
+        const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
+        if (root) setData(Farm.getClickPayload(root));
+      }
+    }, 500);
+    return () => clearInterval(id);
+  }, [open, data]);
+
+  useEffect(() => {
+    if (!open || !data) return;
+    window.__uiOpenForBuilding = { type: data.type, x: data.rootX, y: data.rootY };
+    return () => { window.__uiOpenForBuilding = null; };
+  }, [open, data]);
+
+  if (!open || !data) return null;
+
+  if (data.type === "training_center") {
     return (
       <div style={panelStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
           <strong>Training Center</strong>
           <button onClick={onClose}>✕</button>
         </div>
-        {payload.actions.map((a) => (
+        {data.actions.map((a) => (
           <button key={a.key} style={btnStyle} onClick={() => EventBus.emit("train", { profession: a.key })}>
             {a.label}
           </button>
@@ -24,9 +56,9 @@ export default function BuildingUI({ open, payload, onClose }) {
     );
   }
 
-  if (payload.type === "house") {
-    const incomeText = payload.incomePerInterval > 0
-      ? `+${payload.incomePerInterval} gold every ${Math.round(payload.incomeIntervalMs / 1000)}s`
+  if (data.type === "house") {
+    const incomeText = data.incomePerInterval > 0
+      ? `+${data.incomePerInterval} gold every ${Math.round(data.incomeIntervalMs / 1000)}s`
       : `No income until full`;
     return (
       <div style={panelStyle}>
@@ -34,30 +66,32 @@ export default function BuildingUI({ open, payload, onClose }) {
           <strong>House</strong>
           <button onClick={onClose}>✕</button>
         </div>
-        <div>Occupants: {payload.occupants}/{payload.capacity}</div>
+        <div>Occupants: {data.occupants}/{data.capacity}</div>
         <div>Income: {incomeText}</div>
       </div>
     );
   }
 
-  if (payload.type === "lumberyard") {
-    const [tick, setTick] = useState(0);
-    const workers = payload.workers || [];
+  if (data.type === "lumberyard") {
+    const workers = data.workers || [];
     const canAssignVillager = workers.length < 2 && GameModel.gridData && hasAnyVillager();
     const canAssignForester = workers.length < 2 && GameModel.professions.forester > 0;
     const canUnassign = workers.length > 0;
     const canPickTile = workers.length > 0;
 
     const assign = (type) => {
-      const ok = Lumberyard.assignWorker(window.__phaserScene, payload.rootX, payload.rootY, type);
-      if (ok) setTick((t) => t + 1);
+      Lumberyard.assignWorker(window.__phaserScene, data.rootX, data.rootY, type);
+      // data will refresh via interval
     };
     const unassign = () => {
-      const ok = Lumberyard.unassignLastWorker(window.__phaserScene, payload.rootX, payload.rootY);
-      if (ok) setTick((t) => t + 1);
+      Lumberyard.unassignLastWorker(window.__phaserScene, data.rootX, data.rootY);
     };
     const pickTile = () => {
-      window.__pickLumberTile = { x: payload.rootX, y: payload.rootY };
+      window.__pickLumberTile = { x: data.rootX, y: data.rootY };
+      window.__pickMode = "lumberyard";
+    };
+    const clearTile = () => {
+      Lumberyard.clearTargetTile(window.__phaserScene, data.rootX, data.rootY);
     };
 
     return (
@@ -67,21 +101,23 @@ export default function BuildingUI({ open, payload, onClose }) {
           <button onClick={onClose}>✕</button>
         </div>
         <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
-        <div>Efficiency: {payload.efficiency}%</div>
+        <div>Efficiency: {data.efficiency}%</div>
+        <div>Assigned wood tile: {data.targetTile ? `${data.targetTile.x},${data.targetTile.y}` : "-"}</div>
         <div style={{ marginTop: 8 }}>
           <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>Assign villager (+15%)</button>
           <button style={btnStyle} disabled={!canAssignForester} onClick={() => assign("forester")}>Assign forester (+50%)</button>
           <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>Unassign last</button>
         </div>
-        <div style={{ marginTop: 8 }}>
-          <button style={btnStyle} disabled={!canPickTile} onClick={pickTile}>Assign wood tile (nearby forest)</button>
+        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <button style={btnStyle} disabled={!canPickTile} onClick={pickTile}>Assign wood tile</button>
+          <button style={btnStyle} disabled={!data.targetTile} onClick={clearTile}>Unassign tile</button>
         </div>
         <p style={{ marginTop: 8, opacity: 0.8 }}>Production starts when workers assigned and a forest tile is selected nearby. 100% efficiency yields +1 wood/20s.</p>
       </div>
     );
   }
 
-  if (payload.type === "farm") {
+  if (data.type === "farm") {
     return (
       <div style={panelStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -111,7 +147,7 @@ const panelStyle = {
   position: "absolute",
   left: 12,
   bottom: 12,
-  minWidth: 260,
+  minWidth: 280,
   background: "rgba(20,20,20,0.9)",
   color: "#fff",
   padding: 12,

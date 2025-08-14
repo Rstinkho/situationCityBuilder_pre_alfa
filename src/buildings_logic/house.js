@@ -60,6 +60,8 @@ export function getClickPayload(cell) {
     capacity: HOUSE_CAPACITY,
     incomePerInterval,
     incomeIntervalMs: GOLD_PAYOUT_EVERY_MS,
+    rootX: cell.x,
+    rootY: cell.y,
   };
 }
 

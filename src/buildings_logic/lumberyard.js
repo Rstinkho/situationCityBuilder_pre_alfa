@@ -26,6 +26,7 @@ export function init(scene, grid, x, y) {
     workers: [], // array of { type: 'villager' | 'forester' }
     targetTile: null, // { x, y }
     productionTimer: null,
+    highlight: null,
   };
 
   for (let dy = 0; dy < h; dy++) {
@@ -51,6 +52,7 @@ export function getClickPayload(cell) {
     type: "lumberyard",
     workers: cell.data?.workers || [],
     hasTarget: !!cell.data?.targetTile,
+    targetTile: cell.data?.targetTile || null,
     efficiency: computeEfficiency(cell),
     rootX: cell.x,
     rootY: cell.y,
@@ -112,6 +114,15 @@ export function setTargetTile(scene, x, y, tx, ty) {
   if (!within) return false;
 
   root.data.targetTile = { x: tx, y: ty };
+  updateProductionTimer(scene, root);
+  return true;
+}
+
+export function clearTargetTile(scene, x, y) {
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
+  root.data.targetTile = null;
   updateProductionTimer(scene, root);
   return true;
 }
