@@ -37,20 +37,35 @@ export default function BuildingUI({ open, payload, onClose }) {
 
   useEffect(() => {
     if (!open || !data) return;
-    window.__uiOpenForBuilding = { type: data.type, x: data.rootX, y: data.rootY };
-    return () => { window.__uiOpenForBuilding = null; };
+    window.__uiOpenForBuilding = {
+      type: data.type,
+      x: data.rootX,
+      y: data.rootY,
+    };
+    return () => {
+      window.__uiOpenForBuilding = null;
+    };
   }, [open, data]);
 
   if (!open || !data) return null;
 
   const destroyButton = (
-    <button style={btnDestroy} onClick={() => destroyBuilding(data, onClose)}>Destroy</button>
+    <button style={btnDestroy} onClick={() => destroyBuilding(data, onClose)}>
+      Destroy
+    </button>
   );
 
   if (data.type === "training_center") {
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
           <strong>Training Center</strong>
           <div style={{ display: "flex", gap: 8 }}>
             {destroyButton}
@@ -58,30 +73,52 @@ export default function BuildingUI({ open, payload, onClose }) {
           </div>
         </div>
         {data.actions.map((a) => (
-          <button key={a.key} style={btnStyle} onClick={() => EventBus.emit("train", { profession: a.key })}>
+          <button
+            key={a.key}
+            style={btnStyle}
+            onClick={() => EventBus.emit("train", { profession: a.key })}
+          >
             {a.label}
           </button>
         ))}
-        <p style={{ marginTop: 8, opacity: 0.8 }}>Training removes 1 villager from a house but keeps total population the same.</p>
+        <p style={{ marginTop: 8, opacity: 0.8 }}>
+          Training removes 1 villager from a house but keeps total population
+          the same.
+        </p>
       </div>
     );
   }
 
   if (data.type === "house") {
-    const incomeText = data.incomePerInterval > 0
-      ? `+${data.incomePerInterval} gold every ${Math.round(data.incomeIntervalMs / 1000)}s`
-      : `No income until full`;
+    const incomeText =
+      data.incomePerInterval > 0
+        ? `+${data.incomePerInterval} gold every ${Math.round(
+            data.incomeIntervalMs / 1000
+          )}s`
+        : `No income until full`;
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
           <strong>House</strong>
           <div style={{ display: "flex", gap: 8 }}>
             {destroyButton}
             <button onClick={onClose}>✕</button>
           </div>
         </div>
-        <div>Occupants: {data.occupants}/{data.capacity}</div>
-        <div>Villagers: {data.villagers} &nbsp; Farmers: {data.farmers} &nbsp; Foresters: {data.foresters}</div>
+        <div>
+          Occupants: {data.occupants}/{data.capacity}
+        </div>
+        <div>
+          Villagers: {data.villagers} &nbsp; Farmers: {data.farmers} &nbsp;
+          Foresters: {data.foresters}
+        </div>
         <div>Income: {incomeText}</div>
       </div>
     );
@@ -89,17 +126,28 @@ export default function BuildingUI({ open, payload, onClose }) {
 
   if (data.type === "lumberyard") {
     const workers = data.workers || [];
-    const canAssignVillager = workers.length < 2 && GameModel.gridData && hasAnyVillager();
-    const canAssignForester = workers.length < 2 && GameModel.professions.forester > 0;
+    const canAssignVillager =
+      workers.length < 2 && GameModel.gridData && hasAnyVillager();
+    const canAssignForester =
+      workers.length < 2 && GameModel.professions.forester > 0;
     const canUnassign = workers.length > 0;
     const canPickTile = workers.length > 0;
 
     const assign = (type) => {
-      Lumberyard.assignWorker(window.__phaserScene, data.rootX, data.rootY, type);
+      Lumberyard.assignWorker(
+        window.__phaserScene,
+        data.rootX,
+        data.rootY,
+        type
+      );
       // data will refresh via interval
     };
     const unassign = () => {
-      Lumberyard.unassignLastWorker(window.__phaserScene, data.rootX, data.rootY);
+      Lumberyard.unassignLastWorker(
+        window.__phaserScene,
+        data.rootX,
+        data.rootY
+      );
     };
     const pickTile = () => {
       window.__pickLumberTile = { x: data.rootX, y: data.rootY };
@@ -111,7 +159,14 @@ export default function BuildingUI({ open, payload, onClose }) {
 
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
           <strong>Lumberyard</strong>
           <div style={{ display: "flex", gap: 8 }}>
             {destroyButton}
@@ -120,27 +175,65 @@ export default function BuildingUI({ open, payload, onClose }) {
         </div>
         <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
         <div>Efficiency: {data.efficiency}%</div>
-        <div>Assigned wood tile: {data.targetTile ? `${data.targetTile.x},${data.targetTile.y}` : "-"}</div>
+        <div>
+          Assigned wood tile:{" "}
+          {data.targetTile ? `${data.targetTile.x},${data.targetTile.y}` : "-"}
+        </div>
         <div style={{ marginTop: 8 }}>
-          <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>Assign villager (+15%)</button>
-          <button style={btnStyle} disabled={!canAssignForester} onClick={() => assign("forester")}>Assign forester (+50%)</button>
-          <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>Unassign last</button>
+          <button
+            style={btnStyle}
+            disabled={!canAssignVillager}
+            onClick={() => assign("villager")}
+          >
+            Assign villager (+15%)
+          </button>
+          <button
+            style={btnStyle}
+            disabled={!canAssignForester}
+            onClick={() => assign("forester")}
+          >
+            Assign forester (+50%)
+          </button>
+          <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>
+            Unassign last
+          </button>
         </div>
-        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <button style={btnStyle} disabled={!canPickTile} onClick={pickTile}>Assign wood tile</button>
-          <button style={btnStyle} disabled={!data.targetTile} onClick={clearTile}>Unassign tile</button>
+        <div
+          style={{
+            marginTop: 8,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 8,
+          }}
+        >
+          <button style={btnStyle} disabled={!canPickTile} onClick={pickTile}>
+            Assign wood tile
+          </button>
+          <button
+            style={btnStyle}
+            disabled={!data.targetTile}
+            onClick={clearTile}
+          >
+            Unassign tile
+          </button>
         </div>
-        <p style={{ marginTop: 8, opacity: 0.8 }}>Production starts when workers assigned and a forest tile is selected nearby. 100% efficiency yields +1 wood/20s.</p>
+        <p style={{ marginTop: 8, opacity: 0.8 }}>
+          Production starts when workers assigned and a forest tile is selected
+          nearby. 100% efficiency yields +1 wood/20s.
+        </p>
       </div>
     );
   }
 
   if (data.type === "farm") {
     const workers = data.workers || [];
-    const canAssignVillager = workers.length < 2 && GameModel.gridData && hasAnyVillager();
-    const canAssignFarmer = workers.length < 2 && GameModel.professions.farmer > 0;
+    const canAssignVillager =
+      workers.length < 2 && GameModel.gridData && hasAnyVillager();
+    const canAssignFarmer =
+      workers.length < 2 && GameModel.professions.farmer > 0;
     const canUnassign = workers.length > 0;
-    const canCreateFields = workers.length > 0 && (data.fields?.length || 0) < 2;
+    const canCreateFields =
+      workers.length > 0 && (data.fields?.length || 0) < 2;
 
     const assign = (type) => {
       Farm.assignWorker(window.__phaserScene, data.rootX, data.rootY, type);
@@ -154,7 +247,14 @@ export default function BuildingUI({ open, payload, onClose }) {
 
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
           <strong>Farm</strong>
           <div style={{ display: "flex", gap: 8 }}>
             {destroyButton}
@@ -163,16 +263,39 @@ export default function BuildingUI({ open, payload, onClose }) {
         </div>
         <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
         <div>Efficiency: {data.efficiency}%</div>
-        <div>Fields: {(data.fields?.length || 0)}/2</div>
+        <div>Fields: {data.fields?.length || 0}/2</div>
         <div style={{ marginTop: 8 }}>
-          <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>Assign villager (+15%)</button>
-          <button style={btnStyle} disabled={!canAssignFarmer} onClick={() => assign("farmer")}>Assign farmer (+50%)</button>
-          <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>Unassign last</button>
+          <button
+            style={btnStyle}
+            disabled={!canAssignVillager}
+            onClick={() => assign("villager")}
+          >
+            Assign villager (+15%)
+          </button>
+          <button
+            style={btnStyle}
+            disabled={!canAssignFarmer}
+            onClick={() => assign("farmer")}
+          >
+            Assign farmer (+50%)
+          </button>
+          <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>
+            Unassign last
+          </button>
         </div>
         <div style={{ marginTop: 8 }}>
-          <button style={btnStyle} disabled={!canCreateFields} onClick={createFields}>Create fields (2 tiles in front)</button>
+          <button
+            style={btnStyle}
+            disabled={!canCreateFields}
+            onClick={createFields}
+          >
+            Create fields (2 tiles in front)
+          </button>
         </div>
-        <p style={{ marginTop: 8, opacity: 0.8 }}>Production starts when at least 2 fields are built and workers are assigned. 100% efficiency yields +1 wheat/20s.</p>
+        <p style={{ marginTop: 8, opacity: 0.8 }}>
+          Production starts when at least 2 fields are built and workers are
+          assigned. 100% efficiency yields +1 wheat/20s.
+        </p>
       </div>
     );
   }
@@ -235,7 +358,12 @@ function hasAnyVillager() {
   for (let y = 0; y < grid.length; y++) {
     for (let x = 0; x < (grid[0]?.length || 0); x++) {
       const cell = grid[y][x];
-      if (cell.buildingType === "house" && cell.root === cell && cell.villagers > 0) return true;
+      if (
+        cell.buildingType === "house" &&
+        cell.root === cell &&
+        cell.villagers > 0
+      )
+        return true;
     }
   }
   return false;
