@@ -39,12 +39,19 @@ export default function BuildingUI({ open, payload, onClose }) {
 
   if (!open || !data) return null;
 
+  const destroyButton = (
+    <button style={btnDestroy} onClick={() => destroyBuilding(data, onClose)}>Destroy</button>
+  );
+
   if (data.type === "training_center") {
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <strong>Training Center</strong>
-          <button onClick={onClose}>✕</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {destroyButton}
+            <button onClick={onClose}>✕</button>
+          </div>
         </div>
         {data.actions.map((a) => (
           <button key={a.key} style={btnStyle} onClick={() => EventBus.emit("train", { profession: a.key })}>
@@ -62,9 +69,12 @@ export default function BuildingUI({ open, payload, onClose }) {
       : `No income until full`;
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <strong>House</strong>
-          <button onClick={onClose}>✕</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {destroyButton}
+            <button onClick={onClose}>✕</button>
+          </div>
         </div>
         <div>Occupants: {data.occupants}/{data.capacity}</div>
         <div>Villagers: {data.villagers} &nbsp; Farmers: {data.farmers} &nbsp; Foresters: {data.foresters}</div>
@@ -97,9 +107,12 @@ export default function BuildingUI({ open, payload, onClose }) {
 
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <strong>Lumberyard</strong>
-          <button onClick={onClose}>✕</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {destroyButton}
+            <button onClick={onClose}>✕</button>
+          </div>
         </div>
         <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
         <div>Efficiency: {data.efficiency}%</div>
@@ -137,9 +150,12 @@ export default function BuildingUI({ open, payload, onClose }) {
 
     return (
       <div style={panelStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <strong>Farm</strong>
-          <button onClick={onClose}>✕</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {destroyButton}
+            <button onClick={onClose}>✕</button>
+          </div>
         </div>
         <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
         <div>Efficiency: {data.efficiency}%</div>
@@ -158,6 +174,56 @@ export default function BuildingUI({ open, payload, onClose }) {
   }
 
   return null;
+}
+
+function destroyBuilding(data, onClose) {
+  const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
+  if (!root) return;
+  if (data.type === "house") {
+    House.remove(window.__phaserScene, root);
+  } else if (data.type === "lumberyard") {
+    destroyGenericBuilding(root);
+  } else if (data.type === "farm") {
+    destroyFarm(root);
+  } else if (data.type === "training_center") {
+    destroyGenericBuilding(root);
+  }
+  onClose();
+}
+
+function destroyGenericBuilding(root) {
+  const { width = 1, height = 1 } = root;
+  const grid = GameModel.gridData;
+  root.building?.destroy();
+  if (root.data?.productionTimer) {
+    root.data.productionTimer.remove(false);
+    root.data.productionTimer = null;
+  }
+  for (let dy = 0; dy < height; dy++) {
+    for (let dx = 0; dx < width; dx++) {
+      const c = grid[root.y + dy][root.x + dx];
+      c.building = null;
+      c.buildingType = null;
+      c.root = null;
+      c.isUnderConstruction = false;
+    }
+  }
+}
+
+function destroyFarm(root) {
+  const grid = GameModel.gridData;
+  // remove fields
+  const fields = root.data?.fields || [];
+  fields.forEach(({ x, y }) => {
+    const c = grid[y]?.[x];
+    if (!c) return;
+    c.building?.destroy();
+    c.building = null;
+    c.buildingType = null;
+    c.root = null;
+    c.isUnderConstruction = false;
+  });
+  destroyGenericBuilding(root);
 }
 
 function hasAnyVillager() {
@@ -194,4 +260,13 @@ const btnStyle = {
   background: "#2a2a2a",
   color: "#fff",
   cursor: "pointer",
+};
+
+const btnDestroy = {
+  ...btnStyle,
+  width: "auto",
+  padding: "6px 8px",
+  margin: 0,
+  background: "#7a1f1f",
+  border: "1px solid #a33",
 };
