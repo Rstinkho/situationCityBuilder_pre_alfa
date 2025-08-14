@@ -42,13 +42,15 @@ export function init(scene, grid, x, y) {
 
 export function loop(_scene, _cell, _dt) {}
 
-export function getClickPayload(_cell) {
+export function getClickPayload(cell) {
   return {
     type: "training_center",
     actions: [
       { key: "farmer", label: "Train Farmer" },
       { key: "forester", label: "Train Forester" },
     ],
+    rootX: cell.x,
+    rootY: cell.y,
   };
 }
 
