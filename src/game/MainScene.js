@@ -6,7 +6,7 @@ import PopulationSystem from "./core/PopulationSystem";
 import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
-import { TILE_SIZE } from "./core/constants";
+import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS } from "./core/constants";
 import { setTargetTile as setLumberTarget } from "../buildings_logic/lumberyard";
 
 export default class MainScene extends Phaser.Scene {
@@ -14,6 +14,7 @@ export default class MainScene extends Phaser.Scene {
     super("MainScene");
     this.reactCallback = null;
     this.tileHint = null;
+    this.pickOverlay = null;
   }
 
   init() {
@@ -29,7 +30,7 @@ export default class MainScene extends Phaser.Scene {
       if (window.__pickLumberTile) {
         const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
         const ok = setLumberTarget(this, window.__pickLumberTile.x, window.__pickLumberTile.y, cx, cy);
-        window.__pickLumberTile = null;
+        this.clearPickMode();
         return;
       }
       handlePointerDown(this, p);
@@ -58,6 +59,69 @@ export default class MainScene extends Phaser.Scene {
       this.tileHint.setText(cell?.tileType || "");
       this.tileHint.setVisible(pointer.event.shiftKey);
     });
+
+    this.events.on("update", this.onUpdate, this);
+  }
+
+  onUpdate() {
+    // handle pick mode visuals
+    if (window.__pickMode === "lumberyard" && window.__pickLumberTile) {
+      this.input.setDefaultCursor("crosshair");
+      this.showPickOverlay();
+    } else {
+      if (!Pointer.selected) this.input.setDefaultCursor("default");
+      this.hidePickOverlayIfAny();
+    }
+
+    // keep selected tile highlighted when UI open
+    const ui = window.__uiOpenForBuilding;
+    if (ui?.type === "lumberyard") {
+      const cell = GameModel.gridData?.[ui.y]?.[ui.x];
+      const target = cell?.data?.targetTile;
+      if (target) this.drawHighlightTile(target.x, target.y, 0x00ff00, 0.25);
+    }
+  }
+
+  showPickOverlay() {
+    if (this.pickOverlay) this.pickOverlay.clear();
+    else this.pickOverlay = this.add.graphics();
+    this.pickOverlay.setDepth(999);
+    this.pickOverlay.clear();
+    const g = this.pickOverlay;
+    const grid = GameModel.gridData;
+    const base = window.__pickLumberTile;
+    const r = LUMBERYARD_NEARBY_RADIUS;
+    for (let y = Math.max(0, base.y - r); y <= Math.min(grid.length - 1, base.y + r); y++) {
+      for (let x = Math.max(0, base.x - r); x <= Math.min(grid[0].length - 1, base.x + r); x++) {
+        const cell = grid[y][x];
+        if (cell.tileType === TILE_TYPES.FOREST) {
+          this.drawHighlightTile(x, y, 0x00ff00, 0.3);
+        }
+      }
+    }
+  }
+
+  drawHighlightTile(x, y, color, alpha = 0.3) {
+    const g = this.pickOverlay || this.add.graphics();
+    if (!this.pickOverlay) {
+      this.pickOverlay = g;
+      g.setDepth(999);
+    }
+    g.fillStyle(color, alpha);
+    g.fillRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+  }
+
+  hidePickOverlayIfAny() {
+    if (this.pickOverlay) {
+      this.pickOverlay.clear();
+    }
+  }
+
+  clearPickMode() {
+    window.__pickMode = null;
+    window.__pickLumberTile = null;
+    this.hidePickOverlayIfAny();
+    if (!Pointer.selected) this.input.setDefaultCursor("default");
   }
 
   update(time, delta) {
