@@ -186,9 +186,9 @@ function destroyBuilding(data, onClose) {
   if (data.type === "house") {
     House.remove(window.__phaserScene, root);
   } else if (data.type === "lumberyard") {
-    destroyGenericBuilding(root);
+    Lumberyard.remove(window.__phaserScene, root);
   } else if (data.type === "farm") {
-    destroyFarm(root);
+    Farm.remove(window.__phaserScene, root);
   } else if (data.type === "training_center") {
     TrainingCenter.remove(window.__phaserScene, root);
   }
