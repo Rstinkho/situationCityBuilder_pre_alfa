@@ -23,7 +23,7 @@ export function init(scene, grid, x, y) {
   root.width = w;
   root.height = h;
   root.data = {
-    workers: [], // array of { type: 'villager' | 'forester' }
+    workers: [], // array of { type: 'villager' | 'forester', home: {x,y} }
     targetTile: null, // { x, y }
     productionTimer: null,
     highlight: null,
@@ -70,11 +70,11 @@ export function assignWorker(scene, x, y, workerType) {
     const house = findHouseWithVillager();
     if (!house) return false;
     house.villagers -= 1;
-    workers.push({ type: "villager" });
+    workers.push({ type: "villager", home: { x: house.x, y: house.y } });
   } else if (workerType === "forester") {
     if (GameModel.professions.forester <= 0) return false;
     GameModel.professions.forester -= 1;
-    workers.push({ type: "forester" });
+    workers.push({ type: "forester", home: findAnyHouseRoot() });
   } else {
     return false;
   }
@@ -100,6 +100,10 @@ export function unassignLastWorker(scene, x, y) {
 
   updateProductionTimer(scene, root);
   return true;
+}
+
+export function onWorkersChanged(scene, root) {
+  updateProductionTimer(scene, root);
 }
 
 export function setTargetTile(scene, x, y, tx, ty) {
@@ -188,6 +192,17 @@ function findHouseNeedingVillager() {
       ) {
         return cell;
       }
+    }
+  }
+  return null;
+}
+
+function findAnyHouseRoot() {
+  const grid = GameModel.gridData;
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < grid[0].length; x++) {
+      const cell = grid[y][x];
+      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) return { x: cell.x, y: cell.y };
     }
   }
   return null;

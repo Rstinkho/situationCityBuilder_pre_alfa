@@ -1,6 +1,8 @@
 import GameModel from "../game/core/GameModel";
 import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE, GOLD_PAYOUT_EVERY_MS, HOUSE_FULL_INCOME } from "../game/core/constants";
 import EventBus from "../game/events/eventBus";
+import * as Lumberyard from "./lumberyard";
+import * as Farm from "./farm";
 
 export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
@@ -25,6 +27,7 @@ export function init(scene, grid, x, y) {
   root.occupants = 0;
   root.villagers = 0;
   root.professionCounts = { farmer: 0, forester: 0 };
+  root.assigned = { villager: 0, farmer: 0, forester: 0 };
   root.incoming = 0;
   root.occupantDots = [];
   root.arrivalDots = [];
@@ -120,6 +123,43 @@ export function spawnArrival(scene, root) {
 
 export function remove(scene, cell) {
   const root = cell.root || cell;
+  // Before removing visuals, unassign workers in buildings that reference this house as home
+  const grid = GameModel.gridData;
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < grid[0].length; x++) {
+      const c = grid[y][x];
+      if (!c || c.root !== c) continue;
+      if (c.buildingType === BUILDING_TYPES.LUMBERYARD && c.data?.workers?.length) {
+        const kept = [];
+        for (const w of c.data.workers) {
+          if (w.home && w.home.x === root.x && w.home.y === root.y) {
+            // drop this worker
+          } else {
+            kept.push(w);
+          }
+        }
+        if (kept.length !== c.data.workers.length) {
+          c.data.workers = kept;
+          Lumberyard.onWorkersChanged?.(scene, c);
+        }
+      }
+      if (c.buildingType === BUILDING_TYPES.FARM && c.data?.workers?.length) {
+        const kept = [];
+        for (const w of c.data.workers) {
+          if (w.home && w.home.x === root.x && w.home.y === root.y) {
+            // drop this worker
+          } else {
+            kept.push(w);
+          }
+        }
+        if (kept.length !== c.data.workers.length) {
+          c.data.workers = kept;
+          Farm.onWorkersChanged?.(scene, c);
+        }
+      }
+    }
+  }
+
   root.building?.destroy();
   if (root.occupantDots) {
     root.occupantDots.forEach((d) => d.destroy());
@@ -129,8 +169,16 @@ export function remove(scene, cell) {
     root.arrivalDots.forEach((d) => d.destroy());
     root.arrivalDots.length = 0;
   }
+
+  // Adjust global population and professions
+  const removed = root.occupants || 0;
+  GameModel.population.current = Math.max(0, GameModel.population.current - removed);
+  if (root.professionCounts) {
+    GameModel.professions.farmer = Math.max(0, GameModel.professions.farmer - (root.professionCounts.farmer || 0));
+    GameModel.professions.forester = Math.max(0, GameModel.professions.forester - (root.professionCounts.forester || 0));
+  }
+
   const { width = 1, height = 1 } = root;
-  const grid = GameModel.gridData;
   for (let dy = 0; dy < height; dy++) {
     for (let dx = 0; dx < width; dx++) {
       const c = grid[root.y + dy][root.x + dx];
