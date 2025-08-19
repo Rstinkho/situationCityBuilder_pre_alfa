@@ -14,3 +14,18 @@ export async function saveTilesToSupabase(tyles) {
   }
 }
 
+export async function fetchLatestTilesFromSupabase() {
+  try {
+    const { data, error } = await supabase
+      .from("game_test")
+      .select("tyles")
+      .order("id", { ascending: false })
+      .limit(1);
+    if (error) return { data: null, error };
+    const latest = Array.isArray(data) && data.length > 0 ? data[0]?.tyles : null;
+    return { data: latest || null, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
