@@ -21,8 +21,7 @@ const Grid = {
       grid.push(row);
     }
 
-    // Assign some tile type patches
-    assignTilePatches(grid);
+    // Random tile patches removed for admin-driven assignment
 
     // Grid lines
     const graphics = scene.add.graphics();
@@ -50,33 +49,35 @@ const Grid = {
   setTileOverlayVisible(scene, visible) {
     scene.__tileTypeOverlay__?.setVisible(visible);
   },
+
+  redrawTileOverlay(scene, grid) {
+    const g = scene.__tileTypeOverlay__;
+    if (!g) return;
+    g.clear();
+    g.setAlpha(0.25);
+    grid.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        let color = 0x000000;
+        switch (cell.tileType) {
+          case TILE_TYPES.WATER:
+            color = 0x3366cc; break;
+          case TILE_TYPES.FOREST:
+            color = 0x228b22; break;
+          case TILE_TYPES.MOUNTAIN:
+            color = 0x888888; break;
+          default:
+            color = 0x000000; break;
+        }
+        if (color !== 0x000000) {
+          g.fillStyle(color, 1);
+          g.fillRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+        }
+      });
+    });
+  },
 };
 
-function assignTilePatches(grid) {
-  const height = grid.length;
-  const width = grid[0].length;
-  // Simple patches for WATER, FOREST, MOUNTAIN
-  const patches = [
-    { type: TILE_TYPES.FOREST, count: 4, radius: 5 },
-    { type: TILE_TYPES.WATER, count: 2, radius: 6 },
-    { type: TILE_TYPES.MOUNTAIN, count: 2, radius: 4 },
-  ];
-  patches.forEach(({ type, count, radius }) => {
-    for (let i = 0; i < count; i++) {
-      const cx = Math.floor(Math.random() * width);
-      const cy = Math.floor(Math.random() * height);
-      for (let y = Math.max(0, cy - radius); y <= Math.min(height - 1, cy + radius); y++) {
-        for (let x = Math.max(0, cx - radius); x <= Math.min(width - 1, cx + radius); x++) {
-          const dx = x - cx;
-          const dy = y - cy;
-          if (dx * dx + dy * dy <= radius * radius) {
-            grid[y][x].tileType = type;
-          }
-        }
-      }
-    }
-  });
-}
+// assignTilePatches removed
 
 function createTileTypeOverlay(scene, grid) {
   const g = scene.add.graphics();
