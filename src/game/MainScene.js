@@ -26,6 +26,7 @@ export default class MainScene extends Phaser.Scene {
     window.__phaserScene = this;
 
     this.generateBuildingTextures();
+    this.generateHudIconTextures();
 
     Pointer.init(this);
     this.input.on("pointerdown", (p) => {
@@ -45,7 +46,8 @@ export default class MainScene extends Phaser.Scene {
       PopulationSystem.trainVillager(this, profession);
     });
 
-    this.add.text(12, 12, "1: House  |  2: Training Center  |  3: Farm  |  4: Lumberyard  |  Esc: Cancel  |  Shift: Tiles", { fontSize: 14, color: "#eaeaea" });
+    // Create small HUD overlay with icons for Gold, Wood, and Population
+    this.createHudOverlay();
 
     this.tileHint = this.add.text(0, 0, "", { fontSize: 12, color: "#ddd" });
     this.tileHint.setDepth(1000);
@@ -105,6 +107,9 @@ export default class MainScene extends Phaser.Scene {
       const target = cell?.data?.targetTile;
       if (target) this.drawHighlightTile(target.x, target.y, 0x00ff00, 0.25);
     }
+
+    // refresh HUD overlay values when changed
+    this.updateHudOverlay();
   }
 
   showPickOverlay() {
@@ -151,5 +156,95 @@ export default class MainScene extends Phaser.Scene {
 
   update(time, delta) {
     // placeholder
+  }
+
+  generateHudIconTextures() {
+    // Gold icon
+    if (!this.textures.exists("icon_gold")) {
+      const g = this.add.graphics();
+      g.fillStyle(0xf1c40f, 1);
+      g.fillCircle(8, 8, 7);
+      g.lineStyle(2, 0xb7950b, 1);
+      g.strokeCircle(8, 8, 7);
+      g.generateTexture("icon_gold", 16, 16);
+      g.destroy();
+    }
+    // Wood icon
+    if (!this.textures.exists("icon_wood")) {
+      const g = this.add.graphics();
+      g.fillStyle(0x8e5a2b, 1);
+      g.fillRoundedRect(2, 5, 12, 6, 2);
+      g.fillStyle(0x6e4520, 1);
+      g.fillRoundedRect(1, 7, 14, 2, 1);
+      g.generateTexture("icon_wood", 16, 16);
+      g.destroy();
+    }
+    // Population icon (two small heads)
+    if (!this.textures.exists("icon_pop")) {
+      const g = this.add.graphics();
+      g.fillStyle(0x95a5a6, 1);
+      g.fillCircle(6, 6, 4);
+      g.fillCircle(11, 7, 3.5);
+      g.fillStyle(0x7f8c8d, 1);
+      g.fillRoundedRect(3, 10, 10, 4, 2);
+      g.generateTexture("icon_pop", 16, 16);
+      g.destroy();
+    }
+    // Axe icon
+    if (!this.textures.exists("icon_axe")) {
+      const g = this.add.graphics();
+      g.fillStyle(0x2c3e50, 1);
+      g.fillRect(10, 4, 4, 20);
+      g.fillStyle(0x8e5a2b, 1);
+      g.fillRoundedRect(2, 4, 12, 8, 3);
+      g.generateTexture("icon_axe", 24, 24);
+      g.destroy();
+    }
+  }
+
+  createHudOverlay() {
+    const baseX = 12;
+    const baseY = 12;
+    const gapY = 22;
+    const iconSize = 16;
+
+    const goldIcon = this.add.image(baseX, baseY, "icon_gold").setOrigin(0, 0);
+    const goldText = this.add.text(baseX + iconSize + 6, baseY - 1, "0", { fontSize: 14, color: "#eaeaea" });
+    const woodIcon = this.add.image(baseX, baseY + gapY, "icon_wood").setOrigin(0, 0);
+    const woodText = this.add.text(baseX + iconSize + 6, baseY + gapY - 1, "0", { fontSize: 14, color: "#eaeaea" });
+    const popIcon = this.add.image(baseX, baseY + gapY * 2, "icon_pop").setOrigin(0, 0);
+    const popText = this.add.text(baseX + iconSize + 6, baseY + gapY * 2 - 1, "0/0", { fontSize: 14, color: "#eaeaea" });
+
+    // keep overlay anchored to camera
+    [goldIcon, goldText, woodIcon, woodText, popIcon, popText].forEach((o) => o.setScrollFactor(0));
+    const depth = 1000;
+    [goldIcon, goldText, woodIcon, woodText, popIcon, popText].forEach((o) => o.setDepth(depth));
+
+    this.__hudGoldText = goldText;
+    this.__hudWoodText = woodText;
+    this.__hudPopText = popText;
+    this.__hudLastGold = null;
+    this.__hudLastWood = null;
+    this.__hudLastPop = null;
+
+    this.updateHudOverlay(true);
+  }
+
+  updateHudOverlay(force = false) {
+    const gold = GameModel.gold.toFixed(2);
+    const wood = (GameModel.resources?.wood || 0).toFixed(1);
+    const pop = `${GameModel.population?.current || 0}/${GameModel.population?.cap || 0}`;
+    if (force || this.__hudLastGold !== gold) {
+      this.__hudGoldText?.setText(gold);
+      this.__hudLastGold = gold;
+    }
+    if (force || this.__hudLastWood !== wood) {
+      this.__hudWoodText?.setText(wood);
+      this.__hudLastWood = wood;
+    }
+    if (force || this.__hudLastPop !== pop) {
+      this.__hudPopText?.setText(pop);
+      this.__hudLastPop = pop;
+    }
   }
 }

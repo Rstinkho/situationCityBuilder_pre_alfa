@@ -28,6 +28,7 @@ export function init(scene, grid, x, y) {
     targetTile: null, // { x, y }
     productionTimer: null,
     highlight: null,
+    assignedIcon: null,
   };
 
   for (let dy = 0; dy < h; dy++) {
@@ -120,6 +121,28 @@ export function setTargetTile(scene, x, y, tx, ty) {
   if (!within) return false;
 
   root.data.targetTile = { x: tx, y: ty };
+  // place/update axe icon overlay on assigned tile
+  try {
+    if (!scene.textures.exists("icon_axe")) {
+      const g = scene.add.graphics();
+      g.fillStyle(0x2c3e50, 1);
+      g.fillRect(6, 2, 4, 12);
+      g.fillStyle(0x8e5a2b, 1);
+      g.fillRoundedRect(2, 2, 8, 6, 2);
+      g.generateTexture("icon_axe", 16, 16);
+      g.destroy();
+    }
+  } catch {}
+  const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
+  const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
+  if (root.data.assignedIcon) {
+    root.data.assignedIcon.setPosition(worldX, worldY);
+  } else {
+    const icon = scene.add.image(worldX, worldY, "icon_axe");
+    icon.setOrigin(0.5, 0.5);
+    icon.setDepth(700);
+    root.data.assignedIcon = icon;
+  }
   updateProductionTimer(scene, root);
   return true;
 }
@@ -129,6 +152,10 @@ export function clearTargetTile(scene, x, y) {
   const root = grid[y][x];
   if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
   root.data.targetTile = null;
+  if (root.data.assignedIcon) {
+    try { root.data.assignedIcon.destroy(); } catch {}
+    root.data.assignedIcon = null;
+  }
   updateProductionTimer(scene, root);
   return true;
 }
@@ -147,6 +174,10 @@ export function remove(scene, cell) {
   if (root.data?.productionTimer) {
     root.data.productionTimer.remove(false);
     root.data.productionTimer = null;
+  }
+  if (root.data?.assignedIcon) {
+    try { root.data.assignedIcon.destroy(); } catch {}
+    root.data.assignedIcon = null;
   }
   root.building?.destroy();
   const grid = GameModel.gridData;
@@ -178,6 +209,11 @@ function updateProductionTimer(scene, root) {
     if (root.data.productionTimer) {
       root.data.productionTimer.remove(false);
       root.data.productionTimer = null;
+    }
+    // If no assigned tile, ensure axe icon is removed
+    if (!root.data.targetTile && root.data.assignedIcon) {
+      try { root.data.assignedIcon.destroy(); } catch {}
+      root.data.assignedIcon = null;
     }
     return;
   }
