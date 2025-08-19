@@ -25,6 +25,7 @@ export default class MainScene extends Phaser.Scene {
     this.reactCallback = null;
     this.tileHint = null;
     this.pickOverlay = null;
+    this.__adminAssignRect = null;
   }
   preload() {
     this.load.image("bg", "assets/bg.png");
@@ -117,6 +118,15 @@ export default class MainScene extends Phaser.Scene {
         this.clearPickMode();
         return;
       }
+      if (window.__adminMode && window.__adminTileType) {
+        const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
+        const cell = GameModel.gridData?.[cy]?.[cx];
+        if (cell) {
+          cell.tileType = window.__adminTileType;
+          Grid.redrawTileOverlay(this, GameModel.gridData);
+        }
+        return;
+      }
       handlePointerDown(this, p);
     });
 
@@ -132,12 +142,8 @@ export default class MainScene extends Phaser.Scene {
 
     this.tileHint = this.add.text(0, 0, "", { fontSize: 12, color: "#ddd" });
     this.tileHint.setDepth(1000);
-    this.input.keyboard.on("keydown-SHIFT", () =>
-      Grid.setTileOverlayVisible(this, true)
-    );
-    this.input.keyboard.on("keyup-SHIFT", () =>
-      Grid.setTileOverlayVisible(this, false)
-    );
+    this.input.keyboard.on("keydown-SHIFT", () => Grid.setTileOverlayVisible(this, true));
+    this.input.keyboard.on("keyup-SHIFT", () => Grid.setTileOverlayVisible(this, !!window.__adminMode));
 
     this.input.on("pointermove", (pointer) => {
       const grid = GameModel.gridData;
@@ -152,7 +158,7 @@ export default class MainScene extends Phaser.Scene {
       const cell = grid[cy][cx];
       this.tileHint.setPosition(pointer.worldX + 12, pointer.worldY + 8);
       this.tileHint.setText(cell?.tileType || "");
-      this.tileHint.setVisible(pointer.event.shiftKey);
+      this.tileHint.setVisible(pointer.event.shiftKey || window.__adminMode);
     });
 
     this.events.on("update", this.onUpdate, this);
