@@ -52,9 +52,28 @@ export function getClickPayload(cell) {
       { key: "farmer", label: "Train Farmer" },
       { key: "forester", label: "Train Forester" },
     ],
+    availableVillagers: countAvailableVillagers(),
     rootX: cell.x,
     rootY: cell.y,
   };
+}
+
+function countAvailableVillagers() {
+  const grid = GameModel.gridData || [];
+  let available = 0;
+  for (let y = 0; y < grid.length; y++) {
+    const row = grid[y];
+    if (!row) continue;
+    for (let x = 0; x < row.length; x++) {
+      const c = row[x];
+      if (c?.buildingType === BUILDING_TYPES.HOUSE && c.root === c) {
+        const employed = (c.employed?.villager || 0);
+        const free = Math.max(0, (c.villagers || 0) - employed);
+        available += free;
+      }
+    }
+  }
+  return available;
 }
 
 export function remove(scene, cell) {
