@@ -1,9 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import GameModel from "../game/core/GameModel";
 import Pointer from "../game/core/Pointer";
-import { BUILDING_COSTS, BUILDING_TYPES, TILE_TYPES } from "../game/core/constants";
+import {
+  BUILDING_COSTS,
+  BUILDING_TYPES,
+  TILE_TYPES,
+} from "../game/core/constants";
 import Grid from "../game/core/Grid";
 import { saveTilesToSupabase } from "../utils/supabase";
+
+import house_img from "../assets/buildings_img/house.png";
+import training_img from "../assets/buildings_img/training.png";
+import farm_img from "../assets/buildings_img/farm.png";
+import lumber_img from "../assets/buildings_img/lumber.png";
 
 export default function Interface() {
   const [tab, setTab] = useState("construction");
@@ -336,7 +345,12 @@ function ResourcesPanel() {
   );
 }
 
-function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }) {
+function AdminPanel({
+  adminMode,
+  setAdminMode,
+  adminTileType,
+  setAdminTileType,
+}) {
   const scene = window.__phaserScene;
 
   useEffect(() => {
@@ -402,10 +416,16 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
     <PanelContainer title="Admin Mode">
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button style={btn} onClick={startAssign}>Assign tile</button>
-          <button style={btn} onClick={onSave}>Save</button>
+          <button style={btn} onClick={startAssign}>
+            Assign tile
+          </button>
+          <button style={btn} onClick={onSave}>
+            Save
+          </button>
           <div style={{ opacity: 0.9 }}>
-            {adminMode ? "Click on the map to set tiles. SHIFT shows overlay." : ""}
+            {adminMode
+              ? "Click on the map to set tiles. SHIFT shows overlay."
+              : ""}
           </div>
         </div>
         {adminMode && (
