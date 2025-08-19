@@ -72,6 +72,9 @@ export default function BuildingUI({ open, payload, onClose }) {
             <button onClick={onClose}>✕</button>
           </div>
         </div>
+        <div style={{ marginBottom: 8 }}>
+          Unemployed villagers available: <strong>{data.availableVillagers ?? 0}</strong>
+        </div>
         {data.actions.map((a) => (
           <button
             key={a.key}
@@ -206,7 +209,20 @@ export default function BuildingUI({ open, payload, onClose }) {
             gap: 8,
           }}
         >
-          <button style={btnStyle} disabled={!canPickTile} onClick={pickTile}>
+          <button
+            style={{
+              ...btnStyle,
+              background: canPickTile ? "#2e7d32" : "#3a3a3a",
+              border: canPickTile ? "1px solid #3fa143" : "1px solid #555",
+            }}
+            disabled={!canPickTile}
+            onClick={pickTile}
+            title={
+              canPickTile
+                ? "Click to choose a nearby forest tile"
+                : "Assign requires at least 1 worker; then choose a nearby forest tile"
+            }
+          >
             Assign wood tile
           </button>
           <button
@@ -217,6 +233,11 @@ export default function BuildingUI({ open, payload, onClose }) {
             Unassign tile
           </button>
         </div>
+        {!canPickTile && (
+          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
+            Tip: assign at least one worker, then select a forest tile within range.
+          </div>
+        )}
         <p style={{ marginTop: 8, opacity: 0.8 }}>
           Production starts when workers assigned and a forest tile is selected
           nearby. 100% efficiency yields +1 wood/20s.
@@ -285,13 +306,27 @@ export default function BuildingUI({ open, payload, onClose }) {
         </div>
         <div style={{ marginTop: 8 }}>
           <button
-            style={btnStyle}
+            style={{
+              ...btnStyle,
+              background: canCreateFields ? "#2e7d32" : "#3a3a3a",
+              border: canCreateFields ? "1px solid #3fa143" : "1px solid #555",
+            }}
             disabled={!canCreateFields}
             onClick={createFields}
+            title={
+              canCreateFields
+                ? "Create two field tiles in front of the farm"
+                : "Requires at least 1 worker and two empty tiles directly in front"
+            }
           >
             Create fields (2 tiles in front)
           </button>
         </div>
+        {!canCreateFields && (
+          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
+            Tip: assign a worker and ensure two empty tiles are available in front of the farm.
+          </div>
+        )}
         <p style={{ marginTop: 8, opacity: 0.8 }}>
           Production starts when at least 2 fields are built and workers are
           assigned. 100% efficiency yields +1 wheat/20s.

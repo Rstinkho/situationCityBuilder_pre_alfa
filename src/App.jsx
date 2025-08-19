@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Phaser from "phaser";
 import phaserConfig from "./game/config/phaserConfig";
-import HUD from "./ui/HUD";
+import Interface from "./ui/Interface";
 import BuildingUI from "./ui/BuildingUI";
 import EventBus from "./game/events/eventBus";
 
@@ -34,7 +34,7 @@ export default function App() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr", height: "100vh" }}>
       <div ref={containerRef} style={{ gridRow: 1 }} />
-      <HUD />
+      <Interface />
       <BuildingUI
         open={uiState.open}
         payload={uiState.payload}
