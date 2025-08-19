@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import GameModel from "../game/core/GameModel";
 import Pointer from "../game/core/Pointer";
-import { BUILDING_COSTS, BUILDING_TYPES } from "../game/core/constants";
+import { BUILDING_COSTS, BUILDING_TYPES, TILE_TYPES } from "../game/core/constants";
+import Grid from "../game/core/Grid";
+import { saveTilesToSupabase } from "../utils/supabase";
 
 export default function Interface() {
   const [tab, setTab] = useState("construction");
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminTileType, setAdminTileType] = useState(null);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -18,6 +22,14 @@ export default function Interface() {
       {tab === "construction" && <ConstructionPanel />}
       {tab === "people" && <PeoplePanel />}
       {tab === "resources" && <ResourcesPanel />}
+      {tab === "admin" && (
+        <AdminPanel
+          adminMode={adminMode}
+          setAdminMode={setAdminMode}
+          adminTileType={adminTileType}
+          setAdminTileType={setAdminTileType}
+        />
+      )}
     </div>
   );
 }
@@ -27,6 +39,7 @@ function TabBar({ tab, setTab }) {
     { key: "construction", label: "Construction" },
     { key: "people", label: "People" },
     { key: "resources", label: "Resources" },
+    { key: "admin", label: "Admin" },
   ];
   return (
     <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -204,6 +217,91 @@ function ResourcesPanel() {
             </div>
           </div>
         ))}
+      </div>
+    </PanelContainer>
+  );
+}
+
+function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }) {
+  const scene = window.__phaserScene;
+
+  useEffect(() => {
+    if (scene) {
+      Grid.setTileOverlayVisible(scene, adminMode);
+      window.__adminMode = adminMode;
+    }
+  }, [adminMode, scene]);
+
+  const startAssign = () => {
+    setAdminMode(true);
+  };
+
+  const selectType = (t) => {
+    setAdminTileType(t);
+    window.__adminTileType = t;
+  };
+
+  const onSave = async () => {
+    try {
+      const grid = GameModel.gridData || [];
+      const tyles = grid.map((row) => row.map((c) => c.tileType));
+      const { error } = await saveTilesToSupabase(tyles);
+      if (error) {
+        alert(`Save failed: ${error.message || String(error)}`);
+      } else {
+        alert("Saved tiles to Supabase.");
+      }
+    } catch (err) {
+      alert(`Save failed: ${err?.message || String(err)}`);
+    }
+  };
+
+  const btn = {
+    padding: "8px 10px",
+    borderRadius: 8,
+    background: "#2e7d32",
+    border: "1px solid #3fa143",
+    color: "#fff",
+    cursor: "pointer",
+  };
+
+  const typeBtn = (t, label, color) => (
+    <button
+      key={t}
+      onClick={() => selectType(t)}
+      style={{
+        padding: "8px 10px",
+        borderRadius: 8,
+        background: adminTileType === t ? "#1565c0" : "#222",
+        border: adminTileType === t ? "1px solid #1976d2" : "1px solid #555",
+        color: label === "Plains" ? "#ddd" : "#fff",
+        cursor: "pointer",
+        minWidth: 110,
+      }}
+      title={`Set assignment to ${label}`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <PanelContainer title="Admin Mode">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button style={btn} onClick={startAssign}>Assign tile</button>
+          <button style={btn} onClick={onSave}>Save</button>
+          <div style={{ opacity: 0.9 }}>
+            {adminMode ? "Click on the map to set tiles. SHIFT shows overlay." : ""}
+          </div>
+        </div>
+        {adminMode && (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {typeBtn(TILE_TYPES.PLAINS, "Plains")}
+            {typeBtn(TILE_TYPES.FOREST, "Forest")}
+            {typeBtn(TILE_TYPES.WATER, "Water")}
+            {typeBtn(TILE_TYPES.MOUNTAIN, "Mountain")}
+          </div>
+        )}
       </div>
     </PanelContainer>
   );
