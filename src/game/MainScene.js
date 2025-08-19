@@ -8,6 +8,7 @@ import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
 import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS } from "./core/constants";
 import { setTargetTile as setLumberTarget } from "../buildings_logic/lumberyard";
+import { fetchLatestTilesFromSupabase } from "../utils/supabase";
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -25,6 +26,9 @@ export default class MainScene extends Phaser.Scene {
   create() {
     GameModel.gridData = Grid.createGrid(this);
     window.__phaserScene = this;
+
+    // Attempt to load saved tile types from Supabase and apply to grid
+    this.loadSavedTilesIfAny();
 
     this.generateBuildingTextures();
     this.generateHudIconTextures();
@@ -75,6 +79,30 @@ export default class MainScene extends Phaser.Scene {
     });
 
     this.events.on("update", this.onUpdate, this);
+  }
+
+  async loadSavedTilesIfAny() {
+    try {
+      const { data: tyles, error } = await fetchLatestTilesFromSupabase();
+      if (error || !tyles) return;
+      const grid = GameModel.gridData || [];
+      const height = Math.min(grid.length, tyles.length || 0);
+      for (let y = 0; y < height; y++) {
+        const row = grid[y];
+        const savedRow = tyles[y] || [];
+        const width = Math.min(row.length, savedRow.length || 0);
+        for (let x = 0; x < width; x++) {
+          const cell = row[x];
+          const savedType = savedRow[x];
+          if (savedType && Object.values(TILE_TYPES).includes(savedType)) {
+            cell.tileType = savedType;
+          }
+        }
+      }
+      Grid.redrawTileOverlay(this, grid);
+    } catch (_) {
+      // ignore loading errors to keep game running
+    }
   }
 
   generateBuildingTextures() {
