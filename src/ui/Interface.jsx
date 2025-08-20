@@ -90,6 +90,7 @@ function ConstructionPanel() {
     { key: BUILDING_TYPES.TRAINING_CENTER, label: "Training Center", img: "/assets/training_1.png" },
     { key: BUILDING_TYPES.FARM, label: "Farm", img: "/assets/farm_1.png" },
     { key: BUILDING_TYPES.LUMBERYARD, label: "Lumberyard", img: "/assets/lumber_1.png" },
+    { key: BUILDING_TYPES.QUARRY, label: "Quarry", img: "/assets/quarry_1.png" },
   ];
   const canAfford = (key) => GameModel.gold >= (BUILDING_COSTS[key] || 0);
   const onPick = (key) => {
@@ -145,12 +146,13 @@ function ConstructionPanel() {
 
 function PeoplePanel() {
   const p = GameModel.population;
-  const { villager, farmerEmployed, foresterEmployed, villagerEmployed } = useMemo(() => {
+  const { villager, farmerEmployed, foresterEmployed, minerEmployed, villagerEmployed } = useMemo(() => {
     const grid = GameModel.gridData || [];
     let totalVillagers = 0;
     let eVillager = 0;
     let eFarmer = 0;
     let eForester = 0;
+    let eMiner = 0;
     for (let y = 0; y < grid.length; y++) {
       const row = grid[y];
       if (!row) continue;
@@ -161,26 +163,30 @@ function PeoplePanel() {
           eVillager += cell.employed?.villager || 0;
           eFarmer += cell.employed?.farmer || 0;
           eForester += cell.employed?.forester || 0;
+          eMiner += cell.employed?.miner || 0;
         }
       }
     }
-    return { villager: totalVillagers, villagerEmployed: eVillager, farmerEmployed: eFarmer, foresterEmployed: eForester };
+    return { villager: totalVillagers, villagerEmployed: eVillager, farmerEmployed: eFarmer, foresterEmployed: eForester, minerEmployed: eMiner };
   }, [GameModel.gridData, GameModel.population.current]);
 
   const farmerTotal = GameModel.professions.farmer || 0;
   const foresterTotal = GameModel.professions.forester || 0;
+  const minerTotal = GameModel.professions.miner || 0;
 
   const villagerUnemp = Math.max(0, (villager || 0) - (villagerEmployed || 0));
   const farmerUnemp = Math.max(0, (farmerTotal || 0) - (farmerEmployed || 0));
   const foresterUnemp = Math.max(0, (foresterTotal || 0) - (foresterEmployed || 0));
+  const minerUnemp = Math.max(0, (minerTotal || 0) - (minerEmployed || 0));
 
   return (
     <PanelContainer title="People Management">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
         <PeopleStat icon="👥" label="Population" value={`${p.current}/${p.cap}`} sub={"Total / Cap"} />
         <PeopleStat icon="🧑" label="Villagers" value={String(villager)} sub={`Empl: ${villagerEmployed}  Unempl: ${villagerUnemp}`} />
         <PeopleStat icon="👨‍🌾" label="Farmers" value={String(farmerTotal)} sub={`Empl: ${farmerEmployed}  Unempl: ${farmerUnemp}`} />
         <PeopleStat icon="🌲" label="Foresters" value={String(foresterTotal)} sub={`Empl: ${foresterEmployed}  Unempl: ${foresterUnemp}`} />
+        <PeopleStat icon="⛏️" label="Miners" value={String(minerTotal)} sub={`Empl: ${minerEmployed}  Unempl: ${minerUnemp}`} />
       </div>
     </PanelContainer>
   );
@@ -204,6 +210,7 @@ function ResourcesPanel() {
   const items = [
     { key: "wood", label: "Wood", value: res.wood || 0, icon: "🪵" },
     { key: "wheat", label: "Wheat", value: res.wheat || 0, icon: "🌾" },
+    { key: "stone", label: "Stone", value: res.stone || 0, icon: "🪨" },
   ];
   return (
     <PanelContainer title="Resources">

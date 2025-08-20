@@ -9,10 +9,12 @@ const GameModel = {
   professions: {
     farmer: 0,
     forester: 0,
+    miner: 0,
   },
   resources: {
     wheat: 0,
     wood: 0,
+    stone: 0,
   },
   gridData: null,
 };
