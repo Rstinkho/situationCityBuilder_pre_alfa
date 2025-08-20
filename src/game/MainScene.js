@@ -6,12 +6,9 @@ import PopulationSystem from "./core/PopulationSystem";
 import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
-import {
-  TILE_SIZE,
-  TILE_TYPES,
-  LUMBERYARD_NEARBY_RADIUS,
-} from "./core/constants";
+import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS } from "./core/constants";
 import { setTargetTile as setLumberTarget } from "../buildings_logic/lumberyard";
+import { setTargetTile as setQuarryTarget } from "../buildings_logic/quarry";
 import { fetchLatestTilesFromSupabase } from "../utils/supabase";
 
 //Import idle state of buildings
@@ -112,13 +109,13 @@ export default class MainScene extends Phaser.Scene {
     this.input.on("pointerdown", (p) => {
       if (window.__pickLumberTile) {
         const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
-        const ok = setLumberTarget(
-          this,
-          window.__pickLumberTile.x,
-          window.__pickLumberTile.y,
-          cx,
-          cy
-        );
+        const ok = setLumberTarget(this, window.__pickLumberTile.x, window.__pickLumberTile.y, cx, cy);
+        this.clearPickMode();
+        return;
+      }
+      if (window.__pickQuarryTile) {
+        const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
+        const ok = setQuarryTarget(this, window.__pickQuarryTile.x, window.__pickQuarryTile.y, cx, cy);
         this.clearPickMode();
         return;
       }
@@ -192,9 +189,36 @@ export default class MainScene extends Phaser.Scene {
     }
   }
 
+  generateBuildingTextures() {
+    const defs = [
+      { base: "house", color: 0x88bbff },
+      { base: "training", color: 0xffd37a },
+      { base: "farm", color: 0xa8d08d },
+      { base: "lumber", color: 0xb5651d },
+      { base: "quarry", color: 0x7f8c8d },
+    ];
+    defs.forEach(({ base, color }) => {
+      for (let i = 1; i <= 3; i++) {
+        const g = this.add.graphics();
+        const w = TILE_SIZE * (base === "training" ? 3 : 2) - 2;
+        const h = TILE_SIZE * 2 - 2;
+        g.fillStyle(color, 1);
+        g.fillRoundedRect(0, 0, w, h, 4);
+        // add a small animated accent varying by frame
+        g.fillStyle(0xffffff, 0.15 * i);
+        g.fillRect(4, 4, Math.max(4, w * 0.3), 6);
+        g.generateTexture(`${base}_frame_${i}`, w, h);
+        g.destroy();
+      }
+    });
+  }
+
   onUpdate() {
     // handle pick mode visuals
     if (window.__pickMode === "lumberyard" && window.__pickLumberTile) {
+      this.input.setDefaultCursor("crosshair");
+      this.showPickOverlay();
+    } else if (window.__pickMode === "quarry" && window.__pickQuarryTile) {
       this.input.setDefaultCursor("crosshair");
       this.showPickOverlay();
     } else {
@@ -205,6 +229,10 @@ export default class MainScene extends Phaser.Scene {
     // keep selected tile highlighted when UI open
     const ui = window.__uiOpenForBuilding;
     if (ui?.type === "lumberyard") {
+      const cell = GameModel.gridData?.[ui.y]?.[ui.x];
+      const target = cell?.data?.targetTile;
+      if (target) this.drawHighlightTile(target.x, target.y, 0x00ff00, 0.25);
+    } else if (ui?.type === "quarry") {
       const cell = GameModel.gridData?.[ui.y]?.[ui.x];
       const target = cell?.data?.targetTile;
       if (target) this.drawHighlightTile(target.x, target.y, 0x00ff00, 0.25);
@@ -221,20 +249,13 @@ export default class MainScene extends Phaser.Scene {
     this.pickOverlay.clear();
     const g = this.pickOverlay;
     const grid = GameModel.gridData;
-    const base = window.__pickLumberTile;
-    const r = LUMBERYARD_NEARBY_RADIUS;
-    for (
-      let y = Math.max(0, base.y - r);
-      y <= Math.min(grid.length - 1, base.y + r);
-      y++
-    ) {
-      for (
-        let x = Math.max(0, base.x - r);
-        x <= Math.min(grid[0].length - 1, base.x + r);
-        x++
-      ) {
+    const isLumber = window.__pickMode === "lumberyard" && window.__pickLumberTile;
+    const base = isLumber ? window.__pickLumberTile : window.__pickQuarryTile;
+    const r = isLumber ? LUMBERYARD_NEARBY_RADIUS : QUARRY_NEARBY_RADIUS;
+    for (let y = Math.max(0, base.y - r); y <= Math.min(grid.length - 1, base.y + r); y++) {
+      for (let x = Math.max(0, base.x - r); x <= Math.min(grid[0].length - 1, base.x + r); x++) {
         const cell = grid[y][x];
-        if (cell.tileType === TILE_TYPES.FOREST) {
+        if (isLumber ? (cell.tileType === TILE_TYPES.FOREST) : (cell.tileType === TILE_TYPES.MOUNTAIN)) {
           this.drawHighlightTile(x, y, 0x00ff00, 0.3);
         }
       }
@@ -265,6 +286,7 @@ export default class MainScene extends Phaser.Scene {
   clearPickMode() {
     window.__pickMode = null;
     window.__pickLumberTile = null;
+    window.__pickQuarryTile = null;
     this.hidePickOverlayIfAny();
     if (!Pointer.selected) this.input.setDefaultCursor("default");
   }
@@ -315,6 +337,26 @@ export default class MainScene extends Phaser.Scene {
       g.generateTexture("icon_axe", 24, 24);
       g.destroy();
     }
+    // Stone icon
+    if (!this.textures.exists("icon_stone")) {
+      const g = this.add.graphics();
+      g.fillStyle(0x95a5a6, 1);
+      g.fillRoundedRect(3, 5, 10, 8, 2);
+      g.lineStyle(1, 0x7f8c8d, 1);
+      g.strokeRoundedRect(3, 5, 10, 8, 2);
+      g.generateTexture("icon_stone", 16, 16);
+      g.destroy();
+    }
+    // Pickaxe icon
+    if (!this.textures.exists("icon_pickaxe")) {
+      const g = this.add.graphics();
+      g.fillStyle(0x2c3e50, 1);
+      g.fillRect(10, 4, 4, 20);
+      g.fillStyle(0x95a5a6, 1);
+      g.fillRoundedRect(2, 4, 12, 8, 3);
+      g.generateTexture("icon_pickaxe", 24, 24);
+      g.destroy();
+    }
   }
 
   createHudOverlay() {
@@ -327,19 +369,23 @@ export default class MainScene extends Phaser.Scene {
     const goldText = this.add.text(baseX + iconSize + 6, baseY - 1, "0", { fontSize: 14, color: "#eaeaea" });
     const woodIcon = this.add.image(baseX, baseY + gapY, "icon_wood").setOrigin(0, 0);
     const woodText = this.add.text(baseX + iconSize + 6, baseY + gapY - 1, "0", { fontSize: 14, color: "#eaeaea" });
-    const popIcon = this.add.image(baseX, baseY + gapY * 2, "icon_pop").setOrigin(0, 0);
-    const popText = this.add.text(baseX + iconSize + 6, baseY + gapY * 2 - 1, "0/0", { fontSize: 14, color: "#eaeaea" });
+    const stoneIcon = this.add.image(baseX, baseY + gapY * 2, "icon_stone").setOrigin(0, 0);
+    const stoneText = this.add.text(baseX + iconSize + 6, baseY + gapY * 2 - 1, "0", { fontSize: 14, color: "#eaeaea" });
+    const popIcon = this.add.image(baseX, baseY + gapY * 3, "icon_pop").setOrigin(0, 0);
+    const popText = this.add.text(baseX + iconSize + 6, baseY + gapY * 3 - 1, "0/0", { fontSize: 14, color: "#eaeaea" });
 
     // keep overlay anchored to camera
-    [goldIcon, goldText, woodIcon, woodText, popIcon, popText].forEach((o) => o.setScrollFactor(0));
+    [goldIcon, goldText, woodIcon, woodText, stoneIcon, stoneText, popIcon, popText].forEach((o) => o.setScrollFactor(0));
     const depth = 1000;
-    [goldIcon, goldText, woodIcon, woodText, popIcon, popText].forEach((o) => o.setDepth(depth));
+    [goldIcon, goldText, woodIcon, woodText, stoneIcon, stoneText, popIcon, popText].forEach((o) => o.setDepth(depth));
 
     this.__hudGoldText = goldText;
     this.__hudWoodText = woodText;
+    this.__hudStoneText = stoneText;
     this.__hudPopText = popText;
     this.__hudLastGold = null;
     this.__hudLastWood = null;
+    this.__hudLastStone = null;
     this.__hudLastPop = null;
 
     this.updateHudOverlay(true);
@@ -348,6 +394,7 @@ export default class MainScene extends Phaser.Scene {
   updateHudOverlay(force = false) {
     const gold = GameModel.gold.toFixed(2);
     const wood = (GameModel.resources?.wood || 0).toFixed(1);
+    const stone = (GameModel.resources?.stone || 0).toFixed(1);
     const pop = `${GameModel.population?.current || 0}/${GameModel.population?.cap || 0}`;
     if (force || this.__hudLastGold !== gold) {
       this.__hudGoldText?.setText(gold);
@@ -356,6 +403,10 @@ export default class MainScene extends Phaser.Scene {
     if (force || this.__hudLastWood !== wood) {
       this.__hudWoodText?.setText(wood);
       this.__hudLastWood = wood;
+    }
+    if (force || this.__hudLastStone !== stone) {
+      this.__hudStoneText?.setText(stone);
+      this.__hudLastStone = stone;
     }
     if (force || this.__hudLastPop !== pop) {
       this.__hudPopText?.setText(pop);
