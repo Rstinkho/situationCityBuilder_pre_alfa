@@ -62,7 +62,7 @@ export default function FishermanHutPanel({ data, onClose, destroyButton }) {
       <div>Efficiency: {data.efficiency}%</div>
       <div>Gathered: {Number(data.gatheredTotal || 0).toFixed(1)}</div>
       <div>Available: {Number(data.availableToDeliver || 0).toFixed(1)}</div>
-      <div>Assigned warehouse: {data.assignedWarehouse ? `${data.assignedWarehouse.x},${data.assignedWarehouse.y}` : '-'}</div>
+      <div>Assigned warehouse: {data.assignedWarehouse ? `${data.assignedWarehouse.x},${data.assignedWarehouse.y} yes` : '-'}</div>
       <div>Assigned water tile: {data.targetTile ? `${data.targetTile.x},${data.targetTile.y}` : "-"}</div>
       <div style={{ marginTop: 8 }}>
         <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>

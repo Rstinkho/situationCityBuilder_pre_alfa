@@ -52,7 +52,7 @@ export default function FarmPanel({ data, onClose, destroyButton }) {
       <div>Efficiency: {data.efficiency}%</div>
       <div>Gathered: {Number(data.gatheredTotal || 0).toFixed(1)}</div>
       <div>Available: {Number(data.availableToDeliver || 0).toFixed(1)}</div>
-      <div>Assigned warehouse: {data.assignedWarehouse ? `${data.assignedWarehouse.x},${data.assignedWarehouse.y}` : '-'}</div>
+      <div>Assigned warehouse: {data.assignedWarehouse ? `${data.assignedWarehouse.x},${data.assignedWarehouse.y} yes` : '-'}</div>
       <div>Fields: {data.fields?.length || 0}/2</div>
       <div style={{ marginTop: 8 }}>
         <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>
