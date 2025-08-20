@@ -1,10 +1,6 @@
 import GameModel from "../game/core/GameModel";
-import {
-  BUILDING_TYPES,
-  BUILDING_SIZES,
-  TILE_SIZE,
-  FARM_PER_100_EFF_MS,
-} from "../game/core/constants";
+import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE, FARM_PER_100_EFF_MS } from "../game/core/constants";
+import { store as warehouseStore } from "./warehouse";
 import EventBus from "../game/events/eventBus";
 import TimeSystem from "../game/core/TimeSystem";
 
@@ -247,8 +243,7 @@ export function deliverIfReady(scene, x, y) {
 	if (!wh || wh.buildingType !== BUILDING_TYPES.WAREHOUSE || wh.root !== wh) return false;
 	const amount = Math.floor(root.data.availableToDeliver);
 	if (amount < 4) return false;
-	const put = require("./warehouse");
-	const stored = put.store(wh, "wheat", amount);
+	const stored = warehouseStore(wh, "wheat", amount);
 	if (stored > 0) {
 		root.data.availableToDeliver = Math.max(0, root.data.availableToDeliver - stored);
 	}
