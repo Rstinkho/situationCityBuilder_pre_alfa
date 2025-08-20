@@ -6,6 +6,7 @@ import * as House from "../src/buildings_logic/house";
 import * as TrainingCenter from "../src/buildings_logic/training_center";
 import * as Lumberyard from "../src/buildings_logic/lumberyard";
 import * as Farm from "../src/buildings_logic/farm";
+import * as Quarry from "../src/buildings_logic/quarry";
 import EventBus from "../src/game/events/eventBus";
 
 export default function handlePointerDown(scene, pointer) {
@@ -36,6 +37,12 @@ export default function handlePointerDown(scene, pointer) {
 						Lumberyard.init(scene, grid, cx, cy);
 					}
 					break;
+				case BUILDING_TYPES.QUARRY:
+					if (isAdjacentToTileType(grid, cx, cy, w, h, TILE_TYPES.MOUNTAIN)) {
+						GameModel.gold -= cost;
+						Quarry.init(scene, grid, cx, cy);
+					}
+					break;
 				case BUILDING_TYPES.FARM:
 					GameModel.gold -= cost;
 					Farm.init(scene, grid, cx, cy);
@@ -57,6 +64,8 @@ export default function handlePointerDown(scene, pointer) {
 				? TrainingCenter.getClickPayload(target)
 				: target.buildingType === BUILDING_TYPES.LUMBERYARD
 				? Lumberyard.getClickPayload(target)
+				: target.buildingType === BUILDING_TYPES.QUARRY
+				? Quarry.getClickPayload(target)
 				: target.buildingType === BUILDING_TYPES.FARM
 				? Farm.getClickPayload(target)
 				: null;

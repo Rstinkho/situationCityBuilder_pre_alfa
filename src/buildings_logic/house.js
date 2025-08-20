@@ -3,6 +3,7 @@ import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE, GOLD_PAYOUT_
 import EventBus from "../game/events/eventBus";
 import * as Lumberyard from "./lumberyard";
 import * as Farm from "./farm";
+import * as Quarry from "./quarry";
 
 export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
@@ -29,9 +30,9 @@ export function init(scene, grid, x, y) {
   root.height = h;
   root.occupants = 0;
   root.villagers = 0;
-  root.professionCounts = { farmer: 0, forester: 0 };
-  root.assigned = { villager: 0, farmer: 0, forester: 0 };
-  root.employed = { villager: 0, farmer: 0, forester: 0 };
+  root.professionCounts = { farmer: 0, forester: 0, miner: 0 };
+  root.assigned = { villager: 0, farmer: 0, forester: 0, miner: 0 };
+  root.employed = { villager: 0, farmer: 0, forester: 0, miner: 0 };
   root.incoming = 0;
   root.occupantDots = [];
   root.arrivalDots = [];
@@ -71,6 +72,7 @@ export function getClickPayload(cell) {
     villagers: cell.villagers,
     farmers: cell.professionCounts?.farmer || 0,
     foresters: cell.professionCounts?.forester || 0,
+    miners: cell.professionCounts?.miner || 0,
     capacity: HOUSE_CAPACITY,
     incomePerInterval,
     incomeIntervalMs: GOLD_PAYOUT_EVERY_MS,
@@ -140,6 +142,7 @@ export function remove(scene, cell) {
             // decrement employed for this house
             if (w.type === "villager") root.employed.villager = Math.max(0, (root.employed.villager || 0) - 1);
             if (w.type === "forester") root.employed.forester = Math.max(0, (root.employed.forester || 0) - 1);
+            if (w.type === "miner") root.employed.miner = Math.max(0, (root.employed.miner || 0) - 1);
           } else {
             kept.push(w);
           }
@@ -155,6 +158,7 @@ export function remove(scene, cell) {
           if (w.home && w.home.x === root.x && w.home.y === root.y) {
             if (w.type === "villager") root.employed.villager = Math.max(0, (root.employed.villager || 0) - 1);
             if (w.type === "farmer") root.employed.farmer = Math.max(0, (root.employed.farmer || 0) - 1);
+            if (w.type === "miner") root.employed.miner = Math.max(0, (root.employed.miner || 0) - 1);
           } else {
             kept.push(w);
           }
@@ -162,6 +166,21 @@ export function remove(scene, cell) {
         if (kept.length !== c.data.workers.length) {
           c.data.workers = kept;
           Farm.onWorkersChanged?.(scene, c);
+        }
+      }
+      if (c.buildingType === BUILDING_TYPES.QUARRY && c.data?.workers?.length) {
+        const kept = [];
+        for (const w of c.data.workers) {
+          if (w.home && w.home.x === root.x && w.home.y === root.y) {
+            if (w.type === "villager") root.employed.villager = Math.max(0, (root.employed.villager || 0) - 1);
+            if (w.type === "miner") root.employed.miner = Math.max(0, (root.employed.miner || 0) - 1);
+          } else {
+            kept.push(w);
+          }
+        }
+        if (kept.length !== c.data.workers.length) {
+          c.data.workers = kept;
+          Quarry.onWorkersChanged?.(scene, c);
         }
       }
     }
@@ -183,6 +202,7 @@ export function remove(scene, cell) {
   if (root.professionCounts) {
     GameModel.professions.farmer = Math.max(0, GameModel.professions.farmer - (root.professionCounts.farmer || 0));
     GameModel.professions.forester = Math.max(0, GameModel.professions.forester - (root.professionCounts.forester || 0));
+    GameModel.professions.miner = Math.max(0, GameModel.professions.miner - (root.professionCounts.miner || 0));
   }
 
   const { width = 1, height = 1 } = root;

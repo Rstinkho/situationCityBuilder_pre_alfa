@@ -14,6 +14,13 @@ Open the URL Vite prints (usually http://localhost:5173).
 - Population arrivals (respecting global cap)
 - Training at Training Center (converts 1 villager from any house to a profession)
 - Gold income from full houses (+0.1/10s per full house)
+
+- Minimal HUD overlay
+- Quarry building (place near mountains, assign up to 2 workers; miners or villagers)
+- New profession: Miner (train at Training Center)
+- New resource: Stone (produced by Quarries)
+
 - Resources production of conditions followed
 - Implemented full interface
 - Construction cost system
+
