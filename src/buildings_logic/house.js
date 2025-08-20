@@ -1,5 +1,12 @@
 import GameModel from "../game/core/GameModel";
-import { BUILDING_TYPES, BUILDING_SIZES, HOUSE_CAPACITY, TILE_SIZE, GOLD_PAYOUT_EVERY_MS, HOUSE_FULL_INCOME } from "../game/core/constants";
+import {
+  BUILDING_TYPES,
+  BUILDING_SIZES,
+  HOUSE_CAPACITY,
+  TILE_SIZE,
+  GOLD_PAYOUT_EVERY_MS,
+  HOUSE_FULL_INCOME,
+} from "../game/core/constants";
 import EventBus from "../game/events/eventBus";
 import * as Lumberyard from "./lumberyard";
 import * as Farm from "./farm";
@@ -9,17 +16,14 @@ import * as FishermanHut from "./fisherman_hut";
 export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.HOUSE];
   // Use image frames (mocked with rectangles plus frame change is complex without loader; use Image as texture)
-  const rootX = x * TILE_SIZE + 1;
-  const rootY = y * TILE_SIZE + 1;
-  const rect = scene.add.image(rootX + (w * TILE_SIZE - 2) / 2, rootY + (h * TILE_SIZE - 2) / 2, "house_frame_1");
+  const rootX = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
+  const rootY = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
+  const rect = scene.add
+    .sprite(rootX, rootY, "house_idle")
+    .play("house_idle_anim");
   rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
   rect.setOrigin(0.5, 0.5);
   rect.setInteractive({ useHandCursor: true });
-
-  // naive animation by swapping texture names if available
-  const frames = ["house_frame_1", "house_frame_2", "house_frame_3"];
-  let fi = 0;
-  scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
 
   const root = grid[y][x];
   root.building = rect;
@@ -65,7 +69,8 @@ export function init(scene, grid, x, y) {
 export function loop(_scene, _cell, _dt) {}
 
 export function getClickPayload(cell) {
-  const incomePerInterval = cell.occupants === HOUSE_CAPACITY ? HOUSE_FULL_INCOME : 0;
+  const incomePerInterval =
+    cell.occupants === HOUSE_CAPACITY ? HOUSE_FULL_INCOME : 0;
   return {
     type: "house",
     built: true,
@@ -137,7 +142,10 @@ export function remove(scene, cell) {
     for (let x = 0; x < grid[0].length; x++) {
       const c = grid[y][x];
       if (!c || c.root !== c) continue;
-      if (c.buildingType === BUILDING_TYPES.LUMBERYARD && c.data?.workers?.length) {
+      if (
+        c.buildingType === BUILDING_TYPES.LUMBERYARD &&
+        c.data?.workers?.length
+      ) {
         const kept = [];
         for (const w of c.data.workers) {
           if (w.home && w.home.x === root.x && w.home.y === root.y) {
@@ -215,7 +223,10 @@ export function remove(scene, cell) {
 
   // Adjust global population and professions
   const removed = root.occupants || 0;
-  GameModel.population.current = Math.max(0, GameModel.population.current - removed);
+  GameModel.population.current = Math.max(
+    0,
+    GameModel.population.current - removed
+  );
   if (root.professionCounts) {
     GameModel.professions.farmer = Math.max(0, GameModel.professions.farmer - (root.professionCounts.farmer || 0));
     GameModel.professions.forester = Math.max(0, GameModel.professions.forester - (root.professionCounts.forester || 0));

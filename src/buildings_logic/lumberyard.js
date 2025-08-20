@@ -1,5 +1,12 @@
 import GameModel from "../game/core/GameModel";
-import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE, TILE_TYPES, LUMBER_PER_100_EFF_MS, LUMBERYARD_NEARBY_RADIUS } from "../game/core/constants";
+import {
+  BUILDING_TYPES,
+  BUILDING_SIZES,
+  TILE_SIZE,
+  TILE_TYPES,
+  LUMBER_PER_100_EFF_MS,
+  LUMBERYARD_NEARBY_RADIUS,
+} from "../game/core/constants";
 import EventBus from "../game/events/eventBus";
 import TimeSystem from "../game/core/TimeSystem";
 
@@ -7,14 +14,20 @@ export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.LUMBERYARD];
   const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
   const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
-  const rect = scene.add.image(cx, cy, "lumber_frame_1");
-  rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
+
+  const rect = scene.add.sprite(cx, cy, "lumber_idle").play("lumber_idle_anim");
+
+  // --- COVER LOGIC (replaces setDisplaySize) ---
+  const targetW = w * TILE_SIZE - 2;
+  const targetH = h * TILE_SIZE - 2;
+  const texW = rect.width; // frame width from spritesheet
+  const texH = rect.height; // frame height from spritesheet
+  const scale = Math.max(targetW / texW, targetH / texH); // "cover" like CSS
+  rect.setScale(scale);
+  // --------------------------------------------
+
   rect.setOrigin(0.5, 0.5);
   rect.setInteractive({ useHandCursor: true });
-
-  const frames = ["lumber_frame_1", "lumber_frame_2", "lumber_frame_3"];
-  let fi = 0;
-  scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
 
   const root = grid[y][x];
   root.building = rect;
@@ -97,8 +110,10 @@ export function unassignLastWorker(scene, x, y) {
 
   const home = getHouseByCoords(worker.home);
   if (home) {
-    if (worker.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
-    if (worker.type === "forester") home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
+    if (worker.type === "villager")
+      home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+    if (worker.type === "forester")
+      home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
   }
 
   updateProductionTimer(scene, root);
@@ -167,8 +182,10 @@ export function remove(scene, cell) {
     const w = workers.pop();
     const home = getHouseByCoords(w.home);
     if (home) {
-      if (w.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
-      if (w.type === "forester") home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
+      if (w.type === "villager")
+        home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+      if (w.type === "forester")
+        home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
     }
   }
   if (root.data?.productionTimer) {
@@ -204,7 +221,8 @@ function computeEfficiency(root) {
 }
 
 function updateProductionTimer(scene, root) {
-  const canProduce = (root.data.workers?.length || 0) > 0 && !!root.data.targetTile;
+  const canProduce =
+    (root.data.workers?.length || 0) > 0 && !!root.data.targetTile;
   if (!canProduce) {
     if (root.data.productionTimer) {
       root.data.productionTimer.remove(false);
@@ -267,6 +285,7 @@ function getHouseByCoords(home) {
   if (!home) return null;
   const grid = GameModel.gridData;
   const cell = grid[home.y]?.[home.x];
-  if (cell && cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) return cell;
+  if (cell && cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell)
+    return cell;
   return null;
 }
