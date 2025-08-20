@@ -27,6 +27,9 @@ export function init(scene, grid, x, y) {
 		workers: [], // { type: 'villager' | 'farmer', home: {x,y} }
 		fields: [], // array of root cells for fields
 		productionTimer: null,
+		gatheredTotal: 0,
+		availableToDeliver: 0,
+		assignedWarehouse: null,
 	};
 
 	for (let dy = 0; dy < h; dy++) {
@@ -211,8 +214,36 @@ function updateProductionTimer(scene, root) {
 		const eff = computeEfficiency(root) / 100;
 		if (eff <= 0) return;
 		GameModel.resources.wheat += eff;
+		root.data.gatheredTotal += eff;
+		root.data.availableToDeliver += eff;
 	});
 	root.data.productionTimer = t;
+}
+
+export function assignWarehouse(scene, x, y, wx, wy) {
+	const grid = GameModel.gridData;
+	const root = grid[y][x];
+	if (!root || root.buildingType !== BUILDING_TYPES.FARM) return false;
+	const w = grid[wy]?.[wx];
+	if (!w || w.buildingType !== BUILDING_TYPES.WAREHOUSE || w.root !== w) return false;
+	root.data.assignedWarehouse = { x: wx, y: wy };
+	return true;
+}
+
+export function deliverIfReady(scene, x, y) {
+	const grid = GameModel.gridData;
+	const root = grid[y][x];
+	if (!root || root.buildingType !== BUILDING_TYPES.FARM) return false;
+	const wh = root.data.assignedWarehouse ? grid[root.data.assignedWarehouse.y]?.[root.data.assignedWarehouse.x] : null;
+	if (!wh || wh.buildingType !== BUILDING_TYPES.WAREHOUSE || wh.root !== wh) return false;
+	const amount = Math.floor(root.data.availableToDeliver);
+	if (amount < 4) return false;
+	const put = require("./warehouse");
+	const stored = put.store(wh, "wheat", amount);
+	if (stored > 0) {
+		root.data.availableToDeliver = Math.max(0, root.data.availableToDeliver - stored);
+	}
+	return stored > 0;
 }
 
 function findHouseWithVillagerAvailable() {

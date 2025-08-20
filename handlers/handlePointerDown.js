@@ -8,6 +8,7 @@ import * as Lumberyard from "../src/buildings_logic/lumberyard";
 import * as Farm from "../src/buildings_logic/farm";
 import * as Quarry from "../src/buildings_logic/quarry";
 import * as FishermanHut from "../src/buildings_logic/fisherman_hut";
+import * as Warehouse from "../src/buildings_logic/warehouse";
 import EventBus from "../src/game/events/eventBus";
 
 export default function handlePointerDown(scene, pointer) {
@@ -53,6 +54,10 @@ export default function handlePointerDown(scene, pointer) {
 				case BUILDING_TYPES.FARM:
 					GameModel.gold -= cost;
 					Farm.init(scene, grid, cx, cy);
+					break;
+				case BUILDING_TYPES.WAREHOUSE:
+					GameModel.gold -= cost;
+					Warehouse.init(scene, grid, cx, cy);
 					break;
 				default:
 					break;

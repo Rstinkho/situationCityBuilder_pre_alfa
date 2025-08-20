@@ -2,6 +2,7 @@ import React from "react";
 import * as Farm from "../../buildings_logic/farm";
 import GameModel from "../../game/core/GameModel";
 import { panelStyle, btnStyle } from "./styles";
+import { BUILDING_TYPES } from "../../game/core/constants";
 
 export default function FarmPanel({ data, onClose, destroyButton }) {
   const workers = data.workers || [];
@@ -9,10 +10,20 @@ export default function FarmPanel({ data, onClose, destroyButton }) {
   const canAssignFarmer = workers.length < 2 && GameModel.professions.farmer > 0;
   const canUnassign = workers.length > 0;
   const canCreateFields = workers.length > 0 && (data.fields?.length || 0) < 2;
+  const hasWarehouse = hasAnyWarehouse();
+  const assignedWh = data.assignedWarehouse;
+  const whFull = assignedWh && isAssignedWarehouseFull(assignedWh);
 
   const assign = (type) => Farm.assignWorker(window.__phaserScene, data.rootX, data.rootY, type);
   const unassign = () => Farm.unassignLastWorker(window.__phaserScene, data.rootX, data.rootY);
   const createFields = () => Farm.createFields(window.__phaserScene, data.rootX, data.rootY);
+  const startAssignWarehouse = () => {
+    window.__pickMode = "assign_warehouse";
+    window.__pickAssign = { x: data.rootX, y: data.rootY, type: "farm" };
+  };
+  const deliver = () => {
+    Farm.deliverIfReady(window.__phaserScene, data.rootX, data.rootY);
+  };
 
   return (
     <div style={panelStyle}>
@@ -22,6 +33,20 @@ export default function FarmPanel({ data, onClose, destroyButton }) {
           {destroyButton}
           <button onClick={onClose}>✕</button>
         </div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <button
+          style={{
+            ...btnStyle,
+            background: hasWarehouse ? (whFull ? "#7a1f1f" : "#2e7d32") : "#3a3a3a",
+            border: hasWarehouse ? (whFull ? "1px solid #a33" : "1px solid #3fa143") : "1px solid #555",
+          }}
+          disabled={!hasWarehouse}
+          onClick={startAssignWarehouse}
+          title={hasWarehouse ? (whFull ? "Assigned warehouse is full" : "Pick a warehouse on map") : "Place a warehouse to enable"}
+        >
+          Deliver to warehouse
+        </button>
       </div>
       <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
       <div>Efficiency: {data.efficiency}%</div>

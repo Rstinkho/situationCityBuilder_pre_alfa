@@ -92,6 +92,7 @@ function ConstructionPanel() {
     { key: BUILDING_TYPES.LUMBERYARD, label: "Lumberyard", img: "/assets/lumber_1.png" },
     { key: BUILDING_TYPES.QUARRY, label: "Quarry", img: "/assets/quarry_1.png" },
     { key: BUILDING_TYPES.FISHERMAN_HUT, label: "Fisherman Hut", img: "/assets/fisherman_1.png" },
+    { key: BUILDING_TYPES.WAREHOUSE, label: "Warehouse", img: "/assets/warehouse_1.png" },
   ];
   const canAfford = (key) => GameModel.gold >= (BUILDING_COSTS[key] || 0);
   const onPick = (key) => {
@@ -219,21 +220,68 @@ function ResourcesPanel() {
     { key: "stone", label: "Stone", value: res.stone || 0, icon: "🪨" },
     { key: "fish", label: "Fish", value: res.fish || 0, icon: "🐟" },
   ];
+  const warehouses = collectWarehouses();
+  const whTotals = sumWarehouseResources(warehouses);
   return (
     <PanelContainer title="Resources">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-        {items.map((it) => (
-          <div key={it.key} style={{ display: "flex", gap: 10, alignItems: "center", background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 26, width: 34, textAlign: "center" }}>{it.icon}</div>
-            <div>
-              <div style={{ fontWeight: 700 }}>{it.label}</div>
-              <div style={{ opacity: 0.85 }}>{Number(it.value).toFixed(1)}</div>
-            </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Global resources</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+            {items.map((it) => (
+              <div key={it.key} style={{ display: "flex", gap: 10, alignItems: "center", background: "#111", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
+                <div style={{ fontSize: 26, width: 34, textAlign: "center" }}>{it.icon}</div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{it.label}</div>
+                  <div style={{ opacity: 0.85 }}>{Number(it.value).toFixed(1)}</div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+        <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Inside warehouses</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+            {[{key: 'wood', label: 'Wood', icon: '🪵'}, {key:'wheat', label:'Wheat', icon:'🌾'}, {key:'stone', label:'Stone', icon:'🪨'}, {key:'fish', label:'Fish', icon:'🐟'}].map(it => (
+              <div key={it.key} style={{ display: "flex", gap: 10, alignItems: "center", background: "#111", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
+                <div style={{ fontSize: 26, width: 34, textAlign: "center" }}>{it.icon}</div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{it.label}</div>
+                  <div style={{ opacity: 0.85 }}>{Number(whTotals[it.key] || 0).toFixed(1)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </PanelContainer>
   );
+}
+
+function collectWarehouses() {
+  const grid = GameModel.gridData || [];
+  const list = [];
+  for (let y = 0; y < grid.length; y++) {
+    const row = grid[y];
+    if (!row) continue;
+    for (let x = 0; x < (row?.length || 0); x++) {
+      const c = row[x];
+      if (c?.buildingType === BUILDING_TYPES.WAREHOUSE && c.root === c) list.push(c);
+    }
+  }
+  return list;
+}
+
+function sumWarehouseResources(wares) {
+  const sum = { wood: 0, stone: 0, wheat: 0, fish: 0 };
+  wares.forEach(w => {
+    const s = w.data?.storage || {};
+    sum.wood += s.wood || 0;
+    sum.stone += s.stone || 0;
+    sum.wheat += s.wheat || 0;
+    sum.fish += s.fish || 0;
+  });
+  return sum;
 }
 
 function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }) {
