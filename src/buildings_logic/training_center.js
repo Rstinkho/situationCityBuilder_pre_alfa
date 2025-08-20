@@ -50,6 +50,7 @@ export function getClickPayload(cell) {
       { key: "farmer", label: "Train Farmer" },
       { key: "forester", label: "Train Forester" },
       { key: "miner", label: "Train Miner" },
+      { key: "fisherman", label: "Train Fisherman" },
     ],
     availableVillagers: countAvailableVillagers(),
     rootX: cell.x,

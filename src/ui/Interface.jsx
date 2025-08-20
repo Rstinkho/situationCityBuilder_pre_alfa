@@ -91,6 +91,7 @@ function ConstructionPanel() {
     { key: BUILDING_TYPES.FARM, label: "Farm", img: "/assets/farm_1.png" },
     { key: BUILDING_TYPES.LUMBERYARD, label: "Lumberyard", img: "/assets/lumber_1.png" },
     { key: BUILDING_TYPES.QUARRY, label: "Quarry", img: "/assets/quarry_1.png" },
+    { key: BUILDING_TYPES.FISHERMAN_HUT, label: "Fisherman Hut", img: "/assets/fisherman_1.png" },
   ];
   const canAfford = (key) => GameModel.gold >= (BUILDING_COSTS[key] || 0);
   const onPick = (key) => {
@@ -146,13 +147,14 @@ function ConstructionPanel() {
 
 function PeoplePanel() {
   const p = GameModel.population;
-  const { villager, farmerEmployed, foresterEmployed, minerEmployed, villagerEmployed } = useMemo(() => {
+  const { villager, farmerEmployed, foresterEmployed, minerEmployed, fishermanEmployed, villagerEmployed } = useMemo(() => {
     const grid = GameModel.gridData || [];
     let totalVillagers = 0;
     let eVillager = 0;
     let eFarmer = 0;
     let eForester = 0;
     let eMiner = 0;
+    let eFisherman = 0;
     for (let y = 0; y < grid.length; y++) {
       const row = grid[y];
       if (!row) continue;
@@ -164,20 +166,23 @@ function PeoplePanel() {
           eFarmer += cell.employed?.farmer || 0;
           eForester += cell.employed?.forester || 0;
           eMiner += cell.employed?.miner || 0;
+          eFisherman += cell.employed?.fisherman || 0;
         }
       }
     }
-    return { villager: totalVillagers, villagerEmployed: eVillager, farmerEmployed: eFarmer, foresterEmployed: eForester, minerEmployed: eMiner };
+    return { villager: totalVillagers, villagerEmployed: eVillager, farmerEmployed: eFarmer, foresterEmployed: eForester, minerEmployed: eMiner, fishermanEmployed: eFisherman };
   }, [GameModel.gridData, GameModel.population.current]);
 
   const farmerTotal = GameModel.professions.farmer || 0;
   const foresterTotal = GameModel.professions.forester || 0;
   const minerTotal = GameModel.professions.miner || 0;
+  const fishermanTotal = GameModel.professions.fisherman || 0;
 
   const villagerUnemp = Math.max(0, (villager || 0) - (villagerEmployed || 0));
   const farmerUnemp = Math.max(0, (farmerTotal || 0) - (farmerEmployed || 0));
   const foresterUnemp = Math.max(0, (foresterTotal || 0) - (foresterEmployed || 0));
   const minerUnemp = Math.max(0, (minerTotal || 0) - (minerEmployed || 0));
+  const fishermanUnemp = Math.max(0, (fishermanTotal || 0) - (fishermanEmployed || 0));
 
   return (
     <PanelContainer title="People Management">
@@ -187,6 +192,7 @@ function PeoplePanel() {
         <PeopleStat icon="👨‍🌾" label="Farmers" value={String(farmerTotal)} sub={`Empl: ${farmerEmployed}  Unempl: ${farmerUnemp}`} />
         <PeopleStat icon="🌲" label="Foresters" value={String(foresterTotal)} sub={`Empl: ${foresterEmployed}  Unempl: ${foresterUnemp}`} />
         <PeopleStat icon="⛏️" label="Miners" value={String(minerTotal)} sub={`Empl: ${minerEmployed}  Unempl: ${minerUnemp}`} />
+        <PeopleStat icon="🎣" label="Fishermen" value={String(fishermanTotal)} sub={`Empl: ${fishermanEmployed}  Unempl: ${fishermanUnemp}`} />
       </div>
     </PanelContainer>
   );
@@ -211,6 +217,7 @@ function ResourcesPanel() {
     { key: "wood", label: "Wood", value: res.wood || 0, icon: "🪵" },
     { key: "wheat", label: "Wheat", value: res.wheat || 0, icon: "🌾" },
     { key: "stone", label: "Stone", value: res.stone || 0, icon: "🪨" },
+    { key: "fish", label: "Fish", value: res.fish || 0, icon: "🐟" },
   ];
   return (
     <PanelContainer title="Resources">
