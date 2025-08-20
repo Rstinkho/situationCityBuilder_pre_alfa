@@ -1,30 +1,30 @@
 import GameModel from "../game/core/GameModel";
-import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE, TILE_TYPES, LUMBER_PER_100_EFF_MS, LUMBERYARD_NEARBY_RADIUS } from "../game/core/constants";
+import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE, TILE_TYPES, FISH_PER_100_EFF_MS, FISHERMAN_HUT_NEARBY_RADIUS } from "../game/core/constants";
 import EventBus from "../game/events/eventBus";
 import TimeSystem from "../game/core/TimeSystem";
 
 export function init(scene, grid, x, y) {
-  const { w, h } = BUILDING_SIZES[BUILDING_TYPES.LUMBERYARD];
+  const { w, h } = BUILDING_SIZES[BUILDING_TYPES.FISHERMAN_HUT];
   const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
   const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
-  const rect = scene.add.image(cx, cy, "lumber_frame_1");
+  const rect = scene.add.image(cx, cy, "fisher_frame_1");
   rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
   rect.setOrigin(0.5, 0.5);
   rect.setInteractive({ useHandCursor: true });
 
-  const frames = ["lumber_frame_1", "lumber_frame_2", "lumber_frame_3"];
+  const frames = ["fisher_frame_1", "fisher_frame_2", "fisher_frame_3"];
   let fi = 0;
   scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
 
   const root = grid[y][x];
   root.building = rect;
-  root.buildingType = BUILDING_TYPES.LUMBERYARD;
+  root.buildingType = BUILDING_TYPES.FISHERMAN_HUT;
   root.root = root;
   root.isUnderConstruction = false;
   root.width = w;
   root.height = h;
   root.data = {
-    workers: [], // array of { type: 'villager' | 'forester', home: {x,y} }
+    workers: [], // array of { type: 'villager' | 'fisherman', home: {x,y} }
     targetTile: null, // { x, y }
     productionTimer: null,
     highlight: null,
@@ -35,7 +35,7 @@ export function init(scene, grid, x, y) {
     for (let dx = 0; dx < w; dx++) {
       const cell = grid[y + dy][x + dx];
       cell.building = rect;
-      cell.buildingType = BUILDING_TYPES.LUMBERYARD;
+      cell.buildingType = BUILDING_TYPES.FISHERMAN_HUT;
       cell.root = root;
       cell.isUnderConstruction = false;
     }
@@ -51,7 +51,7 @@ export function init(scene, grid, x, y) {
 
 export function getClickPayload(cell) {
   return {
-    type: "lumberyard",
+    type: "fisherman_hut",
     workers: cell.data?.workers || [],
     hasTarget: !!cell.data?.targetTile,
     targetTile: cell.data?.targetTile || null,
@@ -64,21 +64,20 @@ export function getClickPayload(cell) {
 export function assignWorker(scene, x, y, workerType) {
   const grid = GameModel.gridData;
   const root = grid[y][x];
-  if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
   const workers = root.data.workers;
   if (workers.length >= 2) return false;
 
   if (workerType === "villager") {
     const house = findHouseWithVillagerAvailable();
     if (!house) return false;
-    // villager stays a villager, mark employed
     house.employed.villager = (house.employed.villager || 0) + 1;
     workers.push({ type: "villager", home: { x: house.x, y: house.y } });
-  } else if (workerType === "forester") {
-    const house = findHouseWithProfessionalAvailable("forester");
+  } else if (workerType === "fisherman") {
+    const house = findHouseWithProfessionalAvailable("fisherman");
     if (!house) return false;
-    house.employed.forester = (house.employed.forester || 0) + 1;
-    workers.push({ type: "forester", home: { x: house.x, y: house.y } });
+    house.employed.fisherman = (house.employed.fisherman || 0) + 1;
+    workers.push({ type: "fisherman", home: { x: house.x, y: house.y } });
   } else {
     return false;
   }
@@ -90,7 +89,7 @@ export function assignWorker(scene, x, y, workerType) {
 export function unassignLastWorker(scene, x, y) {
   const grid = GameModel.gridData;
   const root = grid[y][x];
-  if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
   const workers = root.data.workers;
   if (workers.length === 0) return false;
   const worker = workers.pop();
@@ -98,7 +97,7 @@ export function unassignLastWorker(scene, x, y) {
   const home = getHouseByCoords(worker.home);
   if (home) {
     if (worker.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
-    if (worker.type === "forester") home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
+    if (worker.type === "fisherman") home.employed.fisherman = Math.max(0, (home.employed.fisherman || 0) - 1);
   }
 
   updateProductionTimer(scene, root);
@@ -112,24 +111,24 @@ export function onWorkersChanged(scene, root) {
 export function setTargetTile(scene, x, y, tx, ty) {
   const grid = GameModel.gridData;
   const root = grid[y][x];
-  if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
 
   const cell = grid[ty]?.[tx];
   if (!cell) return false;
-  if (cell.tileType !== TILE_TYPES.FOREST) return false;
-  const within = withinRadius(x, y, tx, ty, LUMBERYARD_NEARBY_RADIUS);
+  if (cell.tileType !== TILE_TYPES.WATER) return false;
+  const within = withinRadius(x, y, tx, ty, FISHERMAN_HUT_NEARBY_RADIUS);
   if (!within) return false;
 
   root.data.targetTile = { x: tx, y: ty };
-  // place/update axe icon overlay on assigned tile
+  // place/update fish icon overlay on assigned tile
   try {
-    if (!scene.textures.exists("icon_axe")) {
+    if (!scene.textures.exists("icon_fish")) {
       const g = scene.add.graphics();
-      g.fillStyle(0x2c3e50, 1);
-      g.fillRect(6, 2, 4, 12);
-      g.fillStyle(0x8e5a2b, 1);
-      g.fillRoundedRect(2, 2, 8, 6, 2);
-      g.generateTexture("icon_axe", 16, 16);
+      g.fillStyle(0x3498db, 1);
+      g.fillCircle(8, 8, 6);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(11, 8, 2);
+      g.generateTexture("icon_fish", 16, 16);
       g.destroy();
     }
   } catch {}
@@ -138,7 +137,7 @@ export function setTargetTile(scene, x, y, tx, ty) {
   if (root.data.assignedIcon) {
     root.data.assignedIcon.setPosition(worldX, worldY);
   } else {
-    const icon = scene.add.image(worldX, worldY, "icon_axe");
+    const icon = scene.add.image(worldX, worldY, "icon_fish");
     icon.setOrigin(0.5, 0.5);
     icon.setDepth(700);
     root.data.assignedIcon = icon;
@@ -150,7 +149,7 @@ export function setTargetTile(scene, x, y, tx, ty) {
 export function clearTargetTile(scene, x, y) {
   const grid = GameModel.gridData;
   const root = grid[y][x];
-  if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
   root.data.targetTile = null;
   if (root.data.assignedIcon) {
     try { root.data.assignedIcon.destroy(); } catch {}
@@ -168,7 +167,7 @@ export function remove(scene, cell) {
     const home = getHouseByCoords(w.home);
     if (home) {
       if (w.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
-      if (w.type === "forester") home.employed.forester = Math.max(0, (home.employed.forester || 0) - 1);
+      if (w.type === "fisherman") home.employed.fisherman = Math.max(0, (home.employed.fisherman || 0) - 1);
     }
   }
   if (root.data?.productionTimer) {
@@ -198,7 +197,7 @@ function computeEfficiency(root) {
   let eff = 0;
   workers.forEach((w) => {
     if (w.type === "villager") eff += 15;
-    if (w.type === "forester") eff += 50;
+    if (w.type === "fisherman") eff += 50;
   });
   return Math.min(100, eff);
 }
@@ -210,7 +209,6 @@ function updateProductionTimer(scene, root) {
       root.data.productionTimer.remove(false);
       root.data.productionTimer = null;
     }
-    // If no assigned tile, ensure axe icon is removed
     if (!root.data.targetTile && root.data.assignedIcon) {
       try { root.data.assignedIcon.destroy(); } catch {}
       root.data.assignedIcon = null;
@@ -220,10 +218,10 @@ function updateProductionTimer(scene, root) {
 
   if (root.data.productionTimer) return; // already producing
 
-  const t = TimeSystem.every(scene, LUMBER_PER_100_EFF_MS, () => {
+  const t = TimeSystem.every(scene, FISH_PER_100_EFF_MS, () => {
     const eff = computeEfficiency(root) / 100;
     if (eff <= 0) return;
-    GameModel.resources.wood += eff;
+    GameModel.resources.fish += eff;
   });
   root.data.productionTimer = t;
 }
@@ -270,3 +268,4 @@ function getHouseByCoords(home) {
   if (cell && cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) return cell;
   return null;
 }
+
