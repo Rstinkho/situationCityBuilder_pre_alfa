@@ -2,6 +2,7 @@ import React from "react";
 import * as FishermanHut from "../../buildings_logic/fisherman_hut";
 import GameModel from "../../game/core/GameModel";
 import { panelStyle, btnStyle } from "./styles";
+import { BUILDING_TYPES } from "../../game/core/constants";
 
 export default function FishermanHutPanel({ data, onClose, destroyButton }) {
   const workers = data.workers || [];
@@ -9,6 +10,9 @@ export default function FishermanHutPanel({ data, onClose, destroyButton }) {
   const canAssignFisherman = workers.length < 2 && GameModel.professions.fisherman > 0;
   const canUnassign = workers.length > 0;
   const canPickTile = workers.length > 0;
+  const hasWarehouse = hasAnyWarehouse();
+  const assignedWh = data.assignedWarehouse;
+  const whFull = assignedWh && isAssignedWarehouseFull(assignedWh);
 
   const assign = (type) => {
     FishermanHut.assignWorker(window.__phaserScene, data.rootX, data.rootY, type);
@@ -23,6 +27,13 @@ export default function FishermanHutPanel({ data, onClose, destroyButton }) {
   const clearTile = () => {
     FishermanHut.clearTargetTile(window.__phaserScene, data.rootX, data.rootY);
   };
+  const startAssignWarehouse = () => {
+    window.__pickMode = "assign_warehouse";
+    window.__pickAssign = { x: data.rootX, y: data.rootY, type: "fisherman_hut" };
+  };
+  const deliver = () => {
+    FishermanHut.deliverIfReady(window.__phaserScene, data.rootX, data.rootY);
+  };
 
   return (
     <div style={panelStyle}>
@@ -32,6 +43,20 @@ export default function FishermanHutPanel({ data, onClose, destroyButton }) {
           {destroyButton}
           <button onClick={onClose}>✕</button>
         </div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <button
+          style={{
+            ...btnStyle,
+            background: hasWarehouse ? (whFull ? "#7a1f1f" : "#2e7d32") : "#3a3a3a",
+            border: hasWarehouse ? (whFull ? "1px solid #a33" : "1px solid #3fa143") : "1px solid #555",
+          }}
+          disabled={!hasWarehouse}
+          onClick={startAssignWarehouse}
+          title={hasWarehouse ? (whFull ? "Assigned warehouse is full" : "Pick a warehouse on map") : "Place a warehouse to enable"}
+        >
+          Deliver to warehouse
+        </button>
       </div>
       <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
       <div>Efficiency: {data.efficiency}%</div>

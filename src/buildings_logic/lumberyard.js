@@ -42,6 +42,9 @@ export function init(scene, grid, x, y) {
     productionTimer: null,
     highlight: null,
     assignedIcon: null,
+    gatheredTotal: 0,
+    availableToDeliver: 0,
+    assignedWarehouse: null, // {x,y}
   };
 
   for (let dy = 0; dy < h; dy++) {
@@ -242,8 +245,36 @@ function updateProductionTimer(scene, root) {
     const eff = computeEfficiency(root) / 100;
     if (eff <= 0) return;
     GameModel.resources.wood += eff;
+    root.data.gatheredTotal += eff;
+    root.data.availableToDeliver += eff;
   });
   root.data.productionTimer = t;
+}
+
+export function assignWarehouse(scene, x, y, wx, wy) {
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
+  const w = grid[wy]?.[wx];
+  if (!w || w.buildingType !== BUILDING_TYPES.WAREHOUSE || w.root !== w) return false;
+  root.data.assignedWarehouse = { x: wx, y: wy };
+  return true;
+}
+
+export function deliverIfReady(scene, x, y) {
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
+  const wh = root.data.assignedWarehouse ? grid[root.data.assignedWarehouse.y]?.[root.data.assignedWarehouse.x] : null;
+  if (!wh || wh.buildingType !== BUILDING_TYPES.WAREHOUSE || wh.root !== wh) return false;
+  const amount = Math.floor(root.data.availableToDeliver);
+  if (amount < 4) return false;
+  const put = require("./warehouse");
+  const stored = put.store(wh, "wood", amount);
+  if (stored > 0) {
+    root.data.availableToDeliver = Math.max(0, root.data.availableToDeliver - stored);
+  }
+  return stored > 0;
 }
 
 function withinRadius(bx, by, tx, ty, r) {

@@ -6,7 +6,7 @@ import PopulationSystem from "./core/PopulationSystem";
 import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
-import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS, FISHERMAN_HUT_NEARBY_RADIUS } from "./core/constants";
+import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS, FISHERMAN_HUT_NEARBY_RADIUS, BUILDING_TYPES } from "./core/constants";
 import { setTargetTile as setLumberTarget } from "../buildings_logic/lumberyard";
 import { setTargetTile as setQuarryTarget } from "../buildings_logic/quarry";
 import { setTargetTile as setFisherTarget } from "../buildings_logic/fisherman_hut";
@@ -204,6 +204,7 @@ export default class MainScene extends Phaser.Scene {
       { base: "lumber", color: 0xb5651d },
       { base: "quarry", color: 0x7f8c8d },
       { base: "fisher", color: 0x3498db },
+      { base: "warehouse", color: 0xb2955b },
     ];
     defs.forEach(({ base, color }) => {
       for (let i = 1; i <= 3; i++) {
@@ -230,6 +231,9 @@ export default class MainScene extends Phaser.Scene {
       this.input.setDefaultCursor("crosshair");
       this.showPickOverlay();
     } else if (window.__pickMode === "fisherman_hut" && window.__pickFisherTile) {
+      this.input.setDefaultCursor("crosshair");
+      this.showPickOverlay();
+    } else if (window.__pickMode === "assign_warehouse" && window.__pickAssign) {
       this.input.setDefaultCursor("crosshair");
       this.showPickOverlay();
     } else {
@@ -267,6 +271,18 @@ export default class MainScene extends Phaser.Scene {
     const isLumber = window.__pickMode === "lumberyard" && window.__pickLumberTile;
     const isQuarry = window.__pickMode === "quarry" && window.__pickQuarryTile;
     const isFisher = window.__pickMode === "fisherman_hut" && window.__pickFisherTile;
+    const isAssignWh = window.__pickMode === "assign_warehouse" && window.__pickAssign;
+    if (isAssignWh) {
+      for (let y = 0; y < grid.length; y++) {
+        for (let x = 0; x < grid[0].length; x++) {
+          const c = grid[y][x];
+          if (c.buildingType === BUILDING_TYPES.WAREHOUSE && c.root === c) {
+            this.drawHighlightTile(x, y, 0x00aaff, 0.3);
+          }
+        }
+      }
+      return;
+    }
     const base = isLumber ? window.__pickLumberTile : isQuarry ? window.__pickQuarryTile : window.__pickFisherTile;
     const r = isLumber ? LUMBERYARD_NEARBY_RADIUS : isQuarry ? QUARRY_NEARBY_RADIUS : FISHERMAN_HUT_NEARBY_RADIUS;
     for (let y = Math.max(0, base.y - r); y <= Math.min(grid.length - 1, base.y + r); y++) {
@@ -306,6 +322,7 @@ export default class MainScene extends Phaser.Scene {
     window.__pickLumberTile = null;
     window.__pickQuarryTile = null;
     window.__pickFisherTile = null;
+    window.__pickAssign = null;
     this.hidePickOverlayIfAny();
     if (!Pointer.selected) this.input.setDefaultCursor("default");
   }

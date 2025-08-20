@@ -14,6 +14,7 @@ import LumberyardPanel from "./buildings/LumberyardPanel";
 import QuarryPanel from "./buildings/QuarryPanel";
 import FarmPanel from "./buildings/FarmPanel";
 import FishermanHutPanel from "./buildings/FishermanHutPanel";
+import WarehousePanel from "./buildings/WarehousePanel";
 
 export default function BuildingUI({ open, payload, onClose }) {
   const [data, setData] = useState(payload);
@@ -80,6 +81,8 @@ export default function BuildingUI({ open, payload, onClose }) {
   if (data.type === "fisherman_hut") return <FishermanHutPanel data={data} onClose={onClose} destroyButton={destroyButton} />;
 
   if (data.type === "farm") return <FarmPanel data={data} onClose={onClose} destroyButton={destroyButton} />;
+
+  if (data.type === "warehouse") return <WarehousePanel data={data} onClose={onClose} destroyButton={destroyButton} />;
 
   return null;
 }
