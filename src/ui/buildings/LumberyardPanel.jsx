@@ -112,3 +112,27 @@ function hasAnyVillager() {
   return false;
 }
 
+function hasAnyWarehouse() {
+  const grid = GameModel.gridData || [];
+  for (let y = 0; y < grid.length; y++) {
+    const row = grid[y];
+    if (!row) continue;
+    for (let x = 0; x < (row?.length || 0); x++) {
+      const c = row[x];
+      if (c?.buildingType === BUILDING_TYPES.WAREHOUSE && c.root === c) return true;
+    }
+  }
+  return false;
+}
+
+function isAssignedWarehouseFull(assignedWh) {
+  if (!assignedWh) return false;
+  const grid = GameModel.gridData || [];
+  const w = grid[assignedWh.y]?.[assignedWh.x];
+  if (!w || w.buildingType !== BUILDING_TYPES.WAREHOUSE || w.root !== w) return false;
+  const cap = w.data?.capacity || 100;
+  const s = w.data?.storage || {};
+  const used = (s.wood || 0) + (s.stone || 0) + (s.wheat || 0) + (s.fish || 0);
+  return used >= cap;
+}
+
