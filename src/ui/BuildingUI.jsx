@@ -14,12 +14,6 @@ import LumberyardPanel from "./buildings/LumberyardPanel";
 import QuarryPanel from "./buildings/QuarryPanel";
 import FarmPanel from "./buildings/FarmPanel";
 import FishermanHutPanel from "./buildings/FishermanHutPanel";
-import TrainingCenterPanel from "./buildings/TrainingCenterPanel";
-import HousePanel from "./buildings/HousePanel";
-import LumberyardPanel from "./buildings/LumberyardPanel";
-import QuarryPanel from "./buildings/QuarryPanel";
-import FarmPanel from "./buildings/FarmPanel";
-import FishermanHutPanel from "./buildings/FishermanHutPanel";
 
 export default function BuildingUI({ open, payload, onClose }) {
   const [data, setData] = useState(payload);
