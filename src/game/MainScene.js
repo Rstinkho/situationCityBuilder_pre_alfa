@@ -6,9 +6,10 @@ import PopulationSystem from "./core/PopulationSystem";
 import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
-import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS } from "./core/constants";
+import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS, FISHERMAN_HUT_NEARBY_RADIUS } from "./core/constants";
 import { setTargetTile as setLumberTarget } from "../buildings_logic/lumberyard";
 import { setTargetTile as setQuarryTarget } from "../buildings_logic/quarry";
+import { setTargetTile as setFisherTarget } from "../buildings_logic/fisherman_hut";
 import { fetchLatestTilesFromSupabase } from "../utils/supabase";
 
 //Import idle state of buildings
@@ -119,6 +120,12 @@ export default class MainScene extends Phaser.Scene {
         this.clearPickMode();
         return;
       }
+      if (window.__pickFisherTile) {
+        const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
+        const ok = setFisherTarget(this, window.__pickFisherTile.x, window.__pickFisherTile.y, cx, cy);
+        this.clearPickMode();
+        return;
+      }
       if (window.__adminMode && window.__adminTileType) {
         const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
         const cell = GameModel.gridData?.[cy]?.[cx];
@@ -196,6 +203,7 @@ export default class MainScene extends Phaser.Scene {
       { base: "farm", color: 0xa8d08d },
       { base: "lumber", color: 0xb5651d },
       { base: "quarry", color: 0x7f8c8d },
+      { base: "fisher", color: 0x3498db },
     ];
     defs.forEach(({ base, color }) => {
       for (let i = 1; i <= 3; i++) {
@@ -221,6 +229,9 @@ export default class MainScene extends Phaser.Scene {
     } else if (window.__pickMode === "quarry" && window.__pickQuarryTile) {
       this.input.setDefaultCursor("crosshair");
       this.showPickOverlay();
+    } else if (window.__pickMode === "fisherman_hut" && window.__pickFisherTile) {
+      this.input.setDefaultCursor("crosshair");
+      this.showPickOverlay();
     } else {
       if (!Pointer.selected) this.input.setDefaultCursor("default");
       this.hidePickOverlayIfAny();
@@ -233,6 +244,10 @@ export default class MainScene extends Phaser.Scene {
       const target = cell?.data?.targetTile;
       if (target) this.drawHighlightTile(target.x, target.y, 0x00ff00, 0.25);
     } else if (ui?.type === "quarry") {
+      const cell = GameModel.gridData?.[ui.y]?.[ui.x];
+      const target = cell?.data?.targetTile;
+      if (target) this.drawHighlightTile(target.x, target.y, 0x00ff00, 0.25);
+    } else if (ui?.type === "fisherman_hut") {
       const cell = GameModel.gridData?.[ui.y]?.[ui.x];
       const target = cell?.data?.targetTile;
       if (target) this.drawHighlightTile(target.x, target.y, 0x00ff00, 0.25);
@@ -250,12 +265,15 @@ export default class MainScene extends Phaser.Scene {
     const g = this.pickOverlay;
     const grid = GameModel.gridData;
     const isLumber = window.__pickMode === "lumberyard" && window.__pickLumberTile;
-    const base = isLumber ? window.__pickLumberTile : window.__pickQuarryTile;
-    const r = isLumber ? LUMBERYARD_NEARBY_RADIUS : QUARRY_NEARBY_RADIUS;
+    const isQuarry = window.__pickMode === "quarry" && window.__pickQuarryTile;
+    const isFisher = window.__pickMode === "fisherman_hut" && window.__pickFisherTile;
+    const base = isLumber ? window.__pickLumberTile : isQuarry ? window.__pickQuarryTile : window.__pickFisherTile;
+    const r = isLumber ? LUMBERYARD_NEARBY_RADIUS : isQuarry ? QUARRY_NEARBY_RADIUS : FISHERMAN_HUT_NEARBY_RADIUS;
     for (let y = Math.max(0, base.y - r); y <= Math.min(grid.length - 1, base.y + r); y++) {
       for (let x = Math.max(0, base.x - r); x <= Math.min(grid[0].length - 1, base.x + r); x++) {
         const cell = grid[y][x];
-        if (isLumber ? (cell.tileType === TILE_TYPES.FOREST) : (cell.tileType === TILE_TYPES.MOUNTAIN)) {
+        const ok = isLumber ? (cell.tileType === TILE_TYPES.FOREST) : isQuarry ? (cell.tileType === TILE_TYPES.MOUNTAIN) : (cell.tileType === TILE_TYPES.WATER);
+        if (ok) {
           this.drawHighlightTile(x, y, 0x00ff00, 0.3);
         }
       }
@@ -287,6 +305,7 @@ export default class MainScene extends Phaser.Scene {
     window.__pickMode = null;
     window.__pickLumberTile = null;
     window.__pickQuarryTile = null;
+    window.__pickFisherTile = null;
     this.hidePickOverlayIfAny();
     if (!Pointer.selected) this.input.setDefaultCursor("default");
   }
@@ -355,6 +374,16 @@ export default class MainScene extends Phaser.Scene {
       g.fillStyle(0x95a5a6, 1);
       g.fillRoundedRect(2, 4, 12, 8, 3);
       g.generateTexture("icon_pickaxe", 24, 24);
+      g.destroy();
+    }
+    // Fish icon
+    if (!this.textures.exists("icon_fish")) {
+      const g = this.add.graphics();
+      g.fillStyle(0x3498db, 1);
+      g.fillCircle(8, 8, 6);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(11, 8, 2);
+      g.generateTexture("icon_fish", 16, 16);
       g.destroy();
     }
   }

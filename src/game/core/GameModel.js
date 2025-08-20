@@ -10,11 +10,13 @@ const GameModel = {
     farmer: 0,
     forester: 0,
     miner: 0,
+    fisherman: 0,
   },
   resources: {
     wheat: 0,
     wood: 0,
     stone: 0,
+    fish: 0,
   },
   gridData: null,
 };
