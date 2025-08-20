@@ -12,6 +12,12 @@ import { setTargetTile as setQuarryTarget } from "../buildings_logic/quarry";
 import { setTargetTile as setFisherTarget } from "../buildings_logic/fisherman_hut";
 import { fetchLatestTilesFromSupabase } from "../utils/supabase";
 
+//Import idle state of buildings
+import farmIdle from "../buildings_logic/farm_idle.png";
+import houseIdle from "../buildings_logic/house_idle.png";
+import lumberIdle from "../buildings_logic/1.png";
+import trainingIdle from "../buildings_logic/training_idle.png";
+
 export default class MainScene extends Phaser.Scene {
   constructor() {
     super("MainScene");
@@ -20,12 +26,77 @@ export default class MainScene extends Phaser.Scene {
     this.pickOverlay = null;
     this.__adminAssignRect = null;
   }
-
+  preload() {
+    this.load.image("bg", "assets/bg.png");
+    this.load.spritesheet("farm_idle", farmIdle, {
+      frameWidth: 63,
+      frameHeight: 63,
+    });
+    this.load.spritesheet("house_idle", houseIdle, {
+      frameWidth: 63,
+      frameHeight: 63,
+    });
+    this.load.spritesheet("lumber_idle", lumberIdle, {
+      frameWidth: 120,
+      frameHeight: 88,
+    });
+    this.load.spritesheet("training_idle", trainingIdle, {
+      frameWidth: 95,
+      frameHeight: 63,
+    });
+  }
   init() {
-    this.reactCallback = (payload) => EventBus.emit("open-building-ui", payload);
+    this.reactCallback = (payload) =>
+      EventBus.emit("open-building-ui", payload);
   }
 
   create() {
+    this.add.image(0, 0, "bg").setOrigin(0);
+    if (!this.anims.exists("farm_idle_anim")) {
+      this.anims.create({
+        key: "farm_idle_anim",
+        frames: this.anims.generateFrameNumbers("farm_idle", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("house_idle_anim")) {
+      this.anims.create({
+        key: "house_idle_anim",
+        frames: this.anims.generateFrameNumbers("house_idle", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("lumber_idle_anim")) {
+      this.anims.create({
+        key: "lumber_idle_anim",
+        frames: this.anims.generateFrameNumbers("lumber_idle", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("training_idle_anim")) {
+      this.anims.create({
+        key: "training_idle_anim",
+        frames: this.anims.generateFrameNumbers("training_idle", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+
     GameModel.gridData = Grid.createGrid(this);
     window.__phaserScene = this;
 
@@ -84,8 +155,14 @@ export default class MainScene extends Phaser.Scene {
 
     this.input.on("pointermove", (pointer) => {
       const grid = GameModel.gridData;
-      const cx = Math.max(0, Math.min(grid[0].length - 1, Math.floor(pointer.worldX / TILE_SIZE)));
-      const cy = Math.max(0, Math.min(grid.length - 1, Math.floor(pointer.worldY / TILE_SIZE)));
+      const cx = Math.max(
+        0,
+        Math.min(grid[0].length - 1, Math.floor(pointer.worldX / TILE_SIZE))
+      );
+      const cy = Math.max(
+        0,
+        Math.min(grid.length - 1, Math.floor(pointer.worldY / TILE_SIZE))
+      );
       const cell = grid[cy][cx];
       this.tileHint.setPosition(pointer.worldX + 12, pointer.worldY + 8);
       this.tileHint.setText(cell?.tileType || "");
@@ -210,7 +287,12 @@ export default class MainScene extends Phaser.Scene {
       g.setDepth(999);
     }
     g.fillStyle(color, alpha);
-    g.fillRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+    g.fillRect(
+      x * TILE_SIZE + 1,
+      y * TILE_SIZE + 1,
+      TILE_SIZE - 2,
+      TILE_SIZE - 2
+    );
   }
 
   hidePickOverlayIfAny() {

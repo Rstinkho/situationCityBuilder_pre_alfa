@@ -1,9 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import GameModel from "../game/core/GameModel";
 import Pointer from "../game/core/Pointer";
-import { BUILDING_COSTS, BUILDING_TYPES, TILE_TYPES } from "../game/core/constants";
+import {
+  BUILDING_COSTS,
+  BUILDING_TYPES,
+  TILE_TYPES,
+} from "../game/core/constants";
 import Grid from "../game/core/Grid";
 import { saveTilesToSupabase } from "../utils/supabase";
+
+import house_img from "../assets/buildings_img/house.png";
+import training_img from "../assets/buildings_img/training.png";
+import farm_img from "../assets/buildings_img/farm.png";
+import lumber_img from "../assets/buildings_img/lumber.png";
 
 export default function Interface() {
   const [tab, setTab] = useState("construction");
@@ -17,7 +26,16 @@ export default function Interface() {
   }, []);
 
   return (
-    <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 1000, fontFamily: "sans-serif", color: "#fff" }}>
+    <div
+      style={{
+        position: "absolute",
+        right: 12,
+        top: 12,
+        zIndex: 1000,
+        fontFamily: "sans-serif",
+        color: "#fff",
+      }}
+    >
       <TabBar tab={tab} setTab={setTab} />
       {tab === "construction" && <ConstructionPanel />}
       {tab === "people" && <PeoplePanel />}
@@ -78,7 +96,9 @@ function PanelContainer({ children, title }) {
         fontSize: 15,
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 16 }}>{title}</div>
+      <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 16 }}>
+        {title}
+      </div>
       {children}
     </div>
   );
@@ -100,7 +120,13 @@ function ConstructionPanel() {
   };
   return (
     <PanelContainer title="Construction">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 10,
+        }}
+      >
         {items.map((it) => (
           <div
             key={it.key}
@@ -116,12 +142,30 @@ function ConstructionPanel() {
               opacity: canAfford(it.key) ? 1 : 0.7,
             }}
           >
-            <div style={{ width: 56, height: 56, background: "#111", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid #333" }}>
-              <img src={it.img} width={48} height={48} style={{ imageRendering: "pixelated", objectFit: "cover" }} />
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                background: "#111",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 6,
+                border: "1px solid #333",
+              }}
+            >
+              <img
+                src={it.img}
+                width={48}
+                height={48}
+                style={{ imageRendering: "pixelated", objectFit: "cover" }}
+              />
             </div>
             <div>
               <div style={{ fontWeight: 700 }}>{it.label}</div>
-              <div style={{ opacity: 0.85, marginTop: 4 }}>Cost: {BUILDING_COSTS[it.key] || 0}g</div>
+              <div style={{ opacity: 0.85, marginTop: 4 }}>
+                Cost: {BUILDING_COSTS[it.key] || 0}g
+              </div>
             </div>
             <button
               onClick={() => onPick(it.key)}
@@ -130,7 +174,9 @@ function ConstructionPanel() {
                 padding: "8px 10px",
                 borderRadius: 8,
                 background: canAfford(it.key) ? "#2e7d32" : "#333",
-                border: canAfford(it.key) ? "1px solid #3fa143" : "1px solid #555",
+                border: canAfford(it.key)
+                  ? "1px solid #3fa143"
+                  : "1px solid #555",
                 color: "#fff",
                 cursor: canAfford(it.key) ? "pointer" : "default",
               }}
@@ -200,12 +246,24 @@ function PeoplePanel() {
 
 function PeopleStat({ icon, label, value, sub }) {
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "center",
+        background: "#1a1a1a",
+        border: "1px solid #333",
+        borderRadius: 8,
+        padding: 10,
+      }}
+    >
       <div style={{ fontSize: 26, width: 34, textAlign: "center" }}>{icon}</div>
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ fontWeight: 700 }}>{label}</div>
         <div style={{ opacity: 0.85 }}>{value}</div>
-        {sub ? <div style={{ opacity: 0.7, fontSize: 13, marginTop: 2 }}>{sub}</div> : null}
+        {sub ? (
+          <div style={{ opacity: 0.7, fontSize: 13, marginTop: 2 }}>{sub}</div>
+        ) : null}
       </div>
     </div>
   );
@@ -221,10 +279,29 @@ function ResourcesPanel() {
   ];
   return (
     <PanelContainer title="Resources">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, 1fr)",
+          gap: 12,
+        }}
+      >
         {items.map((it) => (
-          <div key={it.key} style={{ display: "flex", gap: 10, alignItems: "center", background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 26, width: 34, textAlign: "center" }}>{it.icon}</div>
+          <div
+            key={it.key}
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              background: "#1a1a1a",
+              border: "1px solid #333",
+              borderRadius: 8,
+              padding: 10,
+            }}
+          >
+            <div style={{ fontSize: 26, width: 34, textAlign: "center" }}>
+              {it.icon}
+            </div>
             <div>
               <div style={{ fontWeight: 700 }}>{it.label}</div>
               <div style={{ opacity: 0.85 }}>{Number(it.value).toFixed(1)}</div>
@@ -236,7 +313,12 @@ function ResourcesPanel() {
   );
 }
 
-function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }) {
+function AdminPanel({
+  adminMode,
+  setAdminMode,
+  adminTileType,
+  setAdminTileType,
+}) {
   const scene = window.__phaserScene;
 
   useEffect(() => {
@@ -302,10 +384,16 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
     <PanelContainer title="Admin Mode">
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button style={btn} onClick={startAssign}>Assign tile</button>
-          <button style={btn} onClick={onSave}>Save</button>
+          <button style={btn} onClick={startAssign}>
+            Assign tile
+          </button>
+          <button style={btn} onClick={onSave}>
+            Save
+          </button>
           <div style={{ opacity: 0.9 }}>
-            {adminMode ? "Click on the map to set tiles. SHIFT shows overlay." : ""}
+            {adminMode
+              ? "Click on the map to set tiles. SHIFT shows overlay."
+              : ""}
           </div>
         </div>
         {adminMode && (

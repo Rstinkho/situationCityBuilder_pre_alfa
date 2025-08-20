@@ -1,5 +1,5 @@
 export const TILE_SIZE = 24;
-export const GRID_WIDTH = 66;
+export const GRID_WIDTH = 42;
 export const GRID_HEIGHT = 42;
 
 export const POPULATION_CAP_START = 10;
