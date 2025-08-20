@@ -126,6 +126,31 @@ export default class MainScene extends Phaser.Scene {
         this.clearPickMode();
         return;
       }
+      if (window.__pickAssign) {
+        const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
+        const grid = GameModel.gridData;
+        const wh = grid[cy]?.[cx];
+        const src = window.__pickAssign;
+        if (wh && wh.buildingType === BUILDING_TYPES.WAREHOUSE && wh.root === wh) {
+          try {
+            if (src.type === "lumberyard") {
+              const mod = require("../buildings_logic/lumberyard");
+              mod.assignWarehouse(this, src.x, src.y, cx, cy);
+            } else if (src.type === "quarry") {
+              const mod = require("../buildings_logic/quarry");
+              mod.assignWarehouse(this, src.x, src.y, cx, cy);
+            } else if (src.type === "farm") {
+              const mod = require("../buildings_logic/farm");
+              mod.assignWarehouse(this, src.x, src.y, cx, cy);
+            } else if (src.type === "fisherman_hut") {
+              const mod = require("../buildings_logic/fisherman_hut");
+              mod.assignWarehouse(this, src.x, src.y, cx, cy);
+            }
+          } catch {}
+        }
+        this.clearPickMode();
+        return;
+      }
       if (window.__adminMode && window.__adminTileType) {
         const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
         const cell = GameModel.gridData?.[cy]?.[cx];
@@ -152,6 +177,7 @@ export default class MainScene extends Phaser.Scene {
     this.tileHint.setDepth(1000);
     this.input.keyboard.on("keydown-SHIFT", () => Grid.setTileOverlayVisible(this, true));
     this.input.keyboard.on("keyup-SHIFT", () => Grid.setTileOverlayVisible(this, !!window.__adminMode));
+    this.input.keyboard.on("keydown-ESC", () => this.clearPickMode());
 
     this.input.on("pointermove", (pointer) => {
       const grid = GameModel.gridData;

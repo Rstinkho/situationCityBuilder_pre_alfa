@@ -59,6 +59,9 @@ export function getClickPayload(cell) {
     hasTarget: !!cell.data?.targetTile,
     targetTile: cell.data?.targetTile || null,
     efficiency: computeEfficiency(cell),
+    gatheredTotal: cell.data?.gatheredTotal || 0,
+    availableToDeliver: cell.data?.availableToDeliver || 0,
+    assignedWarehouse: cell.data?.assignedWarehouse || null,
     rootX: cell.x,
     rootY: cell.y,
   };
@@ -227,6 +230,7 @@ function updateProductionTimer(scene, root) {
     GameModel.resources.stone += eff;
     root.data.gatheredTotal += eff;
     root.data.availableToDeliver += eff;
+    deliverIfReady(scene, root.x, root.y);
   });
   root.data.productionTimer = t;
 }
