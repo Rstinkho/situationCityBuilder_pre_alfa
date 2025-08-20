@@ -7,9 +7,10 @@ import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
 import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS, FISHERMAN_HUT_NEARBY_RADIUS, BUILDING_TYPES } from "./core/constants";
-import { setTargetTile as setLumberTarget } from "../buildings_logic/lumberyard";
-import { setTargetTile as setQuarryTarget } from "../buildings_logic/quarry";
-import { setTargetTile as setFisherTarget } from "../buildings_logic/fisherman_hut";
+import { setTargetTile as setLumberTarget, assignWarehouse as assignLumberWarehouse } from "../buildings_logic/lumberyard";
+import { setTargetTile as setQuarryTarget, assignWarehouse as assignQuarryWarehouse } from "../buildings_logic/quarry";
+import { assignWarehouse as assignFarmWarehouse } from "../buildings_logic/farm";
+import { setTargetTile as setFisherTarget, assignWarehouse as assignFisherWarehouse } from "../buildings_logic/fisherman_hut";
 import { fetchLatestTilesFromSupabase } from "../utils/supabase";
 
 //Import idle state of buildings
@@ -132,21 +133,15 @@ export default class MainScene extends Phaser.Scene {
         const wh = grid[cy]?.[cx];
         const src = window.__pickAssign;
         if (wh && wh.buildingType === BUILDING_TYPES.WAREHOUSE && wh.root === wh) {
-          try {
-            if (src.type === "lumberyard") {
-              const mod = require("../buildings_logic/lumberyard");
-              mod.assignWarehouse(this, src.x, src.y, cx, cy);
-            } else if (src.type === "quarry") {
-              const mod = require("../buildings_logic/quarry");
-              mod.assignWarehouse(this, src.x, src.y, cx, cy);
-            } else if (src.type === "farm") {
-              const mod = require("../buildings_logic/farm");
-              mod.assignWarehouse(this, src.x, src.y, cx, cy);
-            } else if (src.type === "fisherman_hut") {
-              const mod = require("../buildings_logic/fisherman_hut");
-              mod.assignWarehouse(this, src.x, src.y, cx, cy);
-            }
-          } catch {}
+          if (src.type === "lumberyard") {
+            assignLumberWarehouse(this, src.x, src.y, cx, cy);
+          } else if (src.type === "quarry") {
+            assignQuarryWarehouse(this, src.x, src.y, cx, cy);
+          } else if (src.type === "farm") {
+            assignFarmWarehouse(this, src.x, src.y, cx, cy);
+          } else if (src.type === "fisherman_hut") {
+            assignFisherWarehouse(this, src.x, src.y, cx, cy);
+          }
         }
         this.clearPickMode();
         return;
