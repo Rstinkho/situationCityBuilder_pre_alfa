@@ -52,14 +52,17 @@ export function init(scene, grid, x, y) {
 }
 
 export function getClickPayload(cell) {
-  return {
-    type: "farm",
-    workers: cell.data?.workers || [],
-    fields: cell.data?.fields || [],
-    efficiency: computeEfficiency(cell),
-    rootX: cell.x,
-    rootY: cell.y,
-  };
+	return {
+		type: "farm",
+		workers: cell.data?.workers || [],
+		fields: cell.data?.fields || [],
+		efficiency: computeEfficiency(cell),
+		gatheredTotal: cell.data?.gatheredTotal || 0,
+		availableToDeliver: cell.data?.availableToDeliver || 0,
+		assignedWarehouse: cell.data?.assignedWarehouse || null,
+		rootX: cell.x,
+		rootY: cell.y,
+	};
 }
 
 export function assignWorker(scene, x, y, workerType) {
