@@ -73,7 +73,8 @@ export default function BuildingUI({ open, payload, onClose }) {
           </div>
         </div>
         <div style={{ marginBottom: 8 }}>
-          Unemployed villagers available: <strong>{data.availableVillagers ?? 0}</strong>
+          Unemployed villagers available:{" "}
+          <strong>{data.availableVillagers ?? 0}</strong>
         </div>
         {data.actions.map((a) => (
           <button
@@ -235,7 +236,8 @@ export default function BuildingUI({ open, payload, onClose }) {
         </div>
         {!canPickTile && (
           <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-            Tip: assign at least one worker, then select a forest tile within range.
+            Tip: assign at least one worker, then select a forest tile within
+            range.
           </div>
         )}
         <p style={{ marginTop: 8, opacity: 0.8 }}>
@@ -324,7 +326,8 @@ export default function BuildingUI({ open, payload, onClose }) {
         </div>
         {!canCreateFields && (
           <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-            Tip: assign a worker and ensure two empty tiles are available in front of the farm.
+            Tip: assign a worker and ensure two empty tiles are available in
+            front of the farm.
           </div>
         )}
         <p style={{ marginTop: 8, opacity: 0.8 }}>
