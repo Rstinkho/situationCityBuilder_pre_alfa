@@ -7,6 +7,7 @@ import * as House from "../buildings_logic/house";
 import * as Farm from "../buildings_logic/farm";
 import * as TrainingCenter from "../buildings_logic/training_center";
 import * as Quarry from "../buildings_logic/quarry";
+import * as FishermanHut from "../buildings_logic/fisherman_hut";
 
 export default function BuildingUI({ open, payload, onClose }) {
   const [data, setData] = useState(payload);
@@ -28,6 +29,9 @@ export default function BuildingUI({ open, payload, onClose }) {
       } else if (data.type === "quarry") {
         const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
         if (root) setData(Quarry.getClickPayload(root));
+      } else if (data.type === "fisherman_hut") {
+        const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
+        if (root) setData(FishermanHut.getClickPayload(root));
       } else if (data.type === "farm") {
         const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
         if (root) setData(Farm.getClickPayload(root));
@@ -124,7 +128,7 @@ export default function BuildingUI({ open, payload, onClose }) {
         </div>
         <div>
           Villagers: {data.villagers} &nbsp; Farmers: {data.farmers} &nbsp;
-          Foresters: {data.foresters} &nbsp; Miners: {data.miners}
+          Foresters: {data.foresters} &nbsp; Miners: {data.miners} &nbsp; Fishermen: {data.fishermen}
         </div>
         <div>Income: {incomeText}</div>
       </div>
@@ -366,6 +370,122 @@ export default function BuildingUI({ open, payload, onClose }) {
     );
   }
 
+  if (data.type === "fisherman_hut") {
+    const workers = data.workers || [];
+    const canAssignVillager =
+      workers.length < 2 && GameModel.gridData && hasAnyVillager();
+    const canAssignFisherman =
+      workers.length < 2 && GameModel.professions.fisherman > 0;
+    const canUnassign = workers.length > 0;
+    const canPickTile = workers.length > 0;
+
+    const assign = (type) => {
+      FishermanHut.assignWorker(
+        window.__phaserScene,
+        data.rootX,
+        data.rootY,
+        type
+      );
+    };
+    const unassign = () => {
+      FishermanHut.unassignLastWorker(
+        window.__phaserScene,
+        data.rootX,
+        data.rootY
+      );
+    };
+    const pickTile = () => {
+      window.__pickFisherTile = { x: data.rootX, y: data.rootY };
+      window.__pickMode = "fisherman_hut";
+    };
+    const clearTile = () => {
+      FishermanHut.clearTargetTile(window.__phaserScene, data.rootX, data.rootY);
+    };
+
+    return (
+      <div style={panelStyle}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
+          <strong>Fisherman Hut</strong>
+          <div style={{ display: "flex", gap: 8 }}>
+            {destroyButton}
+            <button onClick={onClose}>✕</button>
+          </div>
+        </div>
+        <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
+        <div>Efficiency: {data.efficiency}%</div>
+        <div>
+          Assigned water tile: {data.targetTile ? `${data.targetTile.x},${data.targetTile.y}` : "-"}
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <button
+            style={btnStyle}
+            disabled={!canAssignVillager}
+            onClick={() => assign("villager")}
+          >
+            Assign villager (+15%)
+          </button>
+          <button
+            style={btnStyle}
+            disabled={!canAssignFisherman}
+            onClick={() => assign("fisherman")}
+          >
+            Assign fisherman (+50%)
+          </button>
+          <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>
+            Unassign last
+          </button>
+        </div>
+        <div
+          style={{
+            marginTop: 8,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 8,
+          }}
+        >
+          <button
+            style={{
+              ...btnStyle,
+              background: canPickTile ? "#2e7d32" : "#3a3a3a",
+              border: canPickTile ? "1px solid #3fa143" : "1px solid #555",
+            }}
+            disabled={!canPickTile}
+            onClick={pickTile}
+            title={
+              canPickTile
+                ? "Click to choose a nearby water tile"
+                : "Assign requires at least 1 worker; then choose a nearby water tile"
+            }
+          >
+            Assign fish tile
+          </button>
+          <button
+            style={btnStyle}
+            disabled={!data.targetTile}
+            onClick={clearTile}
+          >
+            Unassign tile
+          </button>
+        </div>
+        {!canPickTile && (
+          <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
+            Tip: assign at least one worker, then select a water tile within range.
+          </div>
+        )}
+        <p style={{ marginTop: 8, opacity: 0.8 }}>
+          Production starts when workers assigned and a water tile is selected nearby. 100% efficiency yields +1 fish/20s.
+        </p>
+      </div>
+    );
+  }
+
   if (data.type === "farm") {
     const workers = data.workers || [];
     const canAssignVillager =
@@ -467,6 +587,8 @@ function destroyBuilding(data, onClose) {
     Lumberyard.remove(window.__phaserScene, root);
   } else if (data.type === "quarry") {
     Quarry.remove(window.__phaserScene, root);
+  } else if (data.type === "fisherman_hut") {
+    FishermanHut.remove(window.__phaserScene, root);
   } else if (data.type === "farm") {
     Farm.remove(window.__phaserScene, root);
   } else if (data.type === "training_center") {

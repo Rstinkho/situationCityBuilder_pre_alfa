@@ -23,6 +23,7 @@ export const BUILDING_TYPES = {
   QUARRY: "quarry",
   FARM: "farm",
   FARM_FIELD: "farm_field",
+  FISHERMAN_HUT: "fisherman_hut",
 };
 
 export const BUILDING_SIZES = {
@@ -32,6 +33,7 @@ export const BUILDING_SIZES = {
   [BUILDING_TYPES.QUARRY]: { w: 2, h: 2 },
   [BUILDING_TYPES.FARM]: { w: 2, h: 2 },
   [BUILDING_TYPES.FARM_FIELD]: { w: 1, h: 1 },
+  [BUILDING_TYPES.FISHERMAN_HUT]: { w: 2, h: 2 },
 };
 
 export const LUMBER_PER_100_EFF_MS = 20000;
@@ -39,6 +41,8 @@ export const LUMBERYARD_NEARBY_RADIUS = 3; // tiles
 export const FARM_PER_100_EFF_MS = 20000;
 export const STONE_PER_100_EFF_MS = 20000;
 export const QUARRY_NEARBY_RADIUS = 3; // tiles
+export const FISH_PER_100_EFF_MS = 20000;
+export const FISHERMAN_HUT_NEARBY_RADIUS = 3; // tiles
 
 export const BUILDING_COSTS = {
   [BUILDING_TYPES.HOUSE]: 10,
@@ -47,4 +51,5 @@ export const BUILDING_COSTS = {
   [BUILDING_TYPES.QUARRY]: 30,
   [BUILDING_TYPES.FARM]: 30,
   [BUILDING_TYPES.FARM_FIELD]: 0,
+  [BUILDING_TYPES.FISHERMAN_HUT]: 30,
 };

@@ -1,0 +1,271 @@
+import GameModel from "../game/core/GameModel";
+import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE, TILE_TYPES, FISH_PER_100_EFF_MS, FISHERMAN_HUT_NEARBY_RADIUS } from "../game/core/constants";
+import EventBus from "../game/events/eventBus";
+import TimeSystem from "../game/core/TimeSystem";
+
+export function init(scene, grid, x, y) {
+  const { w, h } = BUILDING_SIZES[BUILDING_TYPES.FISHERMAN_HUT];
+  const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
+  const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
+  const rect = scene.add.image(cx, cy, "fisher_frame_1");
+  rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
+  rect.setOrigin(0.5, 0.5);
+  rect.setInteractive({ useHandCursor: true });
+
+  const frames = ["fisher_frame_1", "fisher_frame_2", "fisher_frame_3"];
+  let fi = 0;
+  scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
+
+  const root = grid[y][x];
+  root.building = rect;
+  root.buildingType = BUILDING_TYPES.FISHERMAN_HUT;
+  root.root = root;
+  root.isUnderConstruction = false;
+  root.width = w;
+  root.height = h;
+  root.data = {
+    workers: [], // array of { type: 'villager' | 'fisherman', home: {x,y} }
+    targetTile: null, // { x, y }
+    productionTimer: null,
+    highlight: null,
+    assignedIcon: null,
+  };
+
+  for (let dy = 0; dy < h; dy++) {
+    for (let dx = 0; dx < w; dx++) {
+      const cell = grid[y + dy][x + dx];
+      cell.building = rect;
+      cell.buildingType = BUILDING_TYPES.FISHERMAN_HUT;
+      cell.root = root;
+      cell.isUnderConstruction = false;
+    }
+  }
+
+  rect.on("pointerdown", () => {
+    if (root.isUnderConstruction) return;
+    EventBus.emit("open-building-ui", getClickPayload(root));
+  });
+
+  return rect;
+}
+
+export function getClickPayload(cell) {
+  return {
+    type: "fisherman_hut",
+    workers: cell.data?.workers || [],
+    hasTarget: !!cell.data?.targetTile,
+    targetTile: cell.data?.targetTile || null,
+    efficiency: computeEfficiency(cell),
+    rootX: cell.x,
+    rootY: cell.y,
+  };
+}
+
+export function assignWorker(scene, x, y, workerType) {
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
+  const workers = root.data.workers;
+  if (workers.length >= 2) return false;
+
+  if (workerType === "villager") {
+    const house = findHouseWithVillagerAvailable();
+    if (!house) return false;
+    house.employed.villager = (house.employed.villager || 0) + 1;
+    workers.push({ type: "villager", home: { x: house.x, y: house.y } });
+  } else if (workerType === "fisherman") {
+    const house = findHouseWithProfessionalAvailable("fisherman");
+    if (!house) return false;
+    house.employed.fisherman = (house.employed.fisherman || 0) + 1;
+    workers.push({ type: "fisherman", home: { x: house.x, y: house.y } });
+  } else {
+    return false;
+  }
+
+  updateProductionTimer(scene, root);
+  return true;
+}
+
+export function unassignLastWorker(scene, x, y) {
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
+  const workers = root.data.workers;
+  if (workers.length === 0) return false;
+  const worker = workers.pop();
+
+  const home = getHouseByCoords(worker.home);
+  if (home) {
+    if (worker.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+    if (worker.type === "fisherman") home.employed.fisherman = Math.max(0, (home.employed.fisherman || 0) - 1);
+  }
+
+  updateProductionTimer(scene, root);
+  return true;
+}
+
+export function onWorkersChanged(scene, root) {
+  updateProductionTimer(scene, root);
+}
+
+export function setTargetTile(scene, x, y, tx, ty) {
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
+
+  const cell = grid[ty]?.[tx];
+  if (!cell) return false;
+  if (cell.tileType !== TILE_TYPES.WATER) return false;
+  const within = withinRadius(x, y, tx, ty, FISHERMAN_HUT_NEARBY_RADIUS);
+  if (!within) return false;
+
+  root.data.targetTile = { x: tx, y: ty };
+  // place/update fish icon overlay on assigned tile
+  try {
+    if (!scene.textures.exists("icon_fish")) {
+      const g = scene.add.graphics();
+      g.fillStyle(0x3498db, 1);
+      g.fillCircle(8, 8, 6);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(11, 8, 2);
+      g.generateTexture("icon_fish", 16, 16);
+      g.destroy();
+    }
+  } catch {}
+  const worldX = tx * TILE_SIZE + TILE_SIZE / 2;
+  const worldY = ty * TILE_SIZE + TILE_SIZE / 2;
+  if (root.data.assignedIcon) {
+    root.data.assignedIcon.setPosition(worldX, worldY);
+  } else {
+    const icon = scene.add.image(worldX, worldY, "icon_fish");
+    icon.setOrigin(0.5, 0.5);
+    icon.setDepth(700);
+    root.data.assignedIcon = icon;
+  }
+  updateProductionTimer(scene, root);
+  return true;
+}
+
+export function clearTargetTile(scene, x, y) {
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.FISHERMAN_HUT) return false;
+  root.data.targetTile = null;
+  if (root.data.assignedIcon) {
+    try { root.data.assignedIcon.destroy(); } catch {}
+    root.data.assignedIcon = null;
+  }
+  updateProductionTimer(scene, root);
+  return true;
+}
+
+export function remove(scene, cell) {
+  const root = cell.root || cell;
+  const workers = root.data?.workers || [];
+  while (workers.length) {
+    const w = workers.pop();
+    const home = getHouseByCoords(w.home);
+    if (home) {
+      if (w.type === "villager") home.employed.villager = Math.max(0, (home.employed.villager || 0) - 1);
+      if (w.type === "fisherman") home.employed.fisherman = Math.max(0, (home.employed.fisherman || 0) - 1);
+    }
+  }
+  if (root.data?.productionTimer) {
+    root.data.productionTimer.remove(false);
+    root.data.productionTimer = null;
+  }
+  if (root.data?.assignedIcon) {
+    try { root.data.assignedIcon.destroy(); } catch {}
+    root.data.assignedIcon = null;
+  }
+  root.building?.destroy();
+  const grid = GameModel.gridData;
+  const { width = 1, height = 1 } = root;
+  for (let dy = 0; dy < height; dy++) {
+    for (let dx = 0; dx < width; dx++) {
+      const c = grid[root.y + dy][root.x + dx];
+      c.building = null;
+      c.buildingType = null;
+      c.root = null;
+      c.isUnderConstruction = false;
+    }
+  }
+}
+
+function computeEfficiency(root) {
+  const workers = root.data?.workers || [];
+  let eff = 0;
+  workers.forEach((w) => {
+    if (w.type === "villager") eff += 15;
+    if (w.type === "fisherman") eff += 50;
+  });
+  return Math.min(100, eff);
+}
+
+function updateProductionTimer(scene, root) {
+  const canProduce = (root.data.workers?.length || 0) > 0 && !!root.data.targetTile;
+  if (!canProduce) {
+    if (root.data.productionTimer) {
+      root.data.productionTimer.remove(false);
+      root.data.productionTimer = null;
+    }
+    if (!root.data.targetTile && root.data.assignedIcon) {
+      try { root.data.assignedIcon.destroy(); } catch {}
+      root.data.assignedIcon = null;
+    }
+    return;
+  }
+
+  if (root.data.productionTimer) return; // already producing
+
+  const t = TimeSystem.every(scene, FISH_PER_100_EFF_MS, () => {
+    const eff = computeEfficiency(root) / 100;
+    if (eff <= 0) return;
+    GameModel.resources.fish += eff;
+  });
+  root.data.productionTimer = t;
+}
+
+function withinRadius(bx, by, tx, ty, r) {
+  const dx = tx - bx;
+  const dy = ty - by;
+  return dx * dx + dy * dy <= r * r;
+}
+
+function findHouseWithVillagerAvailable() {
+  const grid = GameModel.gridData;
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < grid[0].length; x++) {
+      const cell = grid[y][x];
+      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) {
+        const free = cell.villagers - (cell.employed?.villager || 0);
+        if (free > 0) return cell;
+      }
+    }
+  }
+  return null;
+}
+
+function findHouseWithProfessionalAvailable(key) {
+  const grid = GameModel.gridData;
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < grid[0].length; x++) {
+      const cell = grid[y][x];
+      if (cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) {
+        const total = cell.professionCounts?.[key] || 0;
+        const employed = cell.employed?.[key] || 0;
+        if (total - employed > 0) return cell;
+      }
+    }
+  }
+  return null;
+}
+
+function getHouseByCoords(home) {
+  if (!home) return null;
+  const grid = GameModel.gridData;
+  const cell = grid[home.y]?.[home.x];
+  if (cell && cell.buildingType === BUILDING_TYPES.HOUSE && cell.root === cell) return cell;
+  return null;
+}
+
