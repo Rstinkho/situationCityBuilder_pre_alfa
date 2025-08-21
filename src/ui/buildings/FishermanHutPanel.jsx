@@ -63,6 +63,19 @@ export default function FishermanHutPanel({ data, onClose, destroyButton }) {
       <div>Gathered: {Number(data.gatheredTotal || 0).toFixed(1)}</div>
       <div>Available: {Number(data.availableToDeliver || 0).toFixed(1)}</div>
       <div>Assigned warehouse: {data.assignedWarehouse ? `${data.assignedWarehouse.x},${data.assignedWarehouse.y} yes` : '-'}</div>
+      {data.availableToDeliver >= 20 && (
+        <div style={{ 
+          color: "#ff9800", 
+          fontWeight: "bold", 
+          marginTop: 8,
+          padding: "8px",
+          background: "#1a1a1a",
+          borderRadius: "4px",
+          border: "1px solid #ff9800"
+        }}>
+          ⚠️ Limit reached! Build more warehouses!
+        </div>
+      )}
       <div>Assigned water tile: {data.targetTile ? `${data.targetTile.x},${data.targetTile.y}` : "-"}</div>
       <div style={{ marginTop: 8 }}>
         <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>

@@ -5,7 +5,8 @@ import {
   HOUSE_CAPACITY,
   TILE_SIZE,
   GOLD_PAYOUT_EVERY_MS,
-  HOUSE_FULL_INCOME,
+  VILLAGER_INCOME,
+  PROFESSIONAL_INCOME,
 } from "../game/core/constants";
 import EventBus from "../game/events/eventBus";
 import * as Lumberyard from "./lumberyard";
@@ -69,8 +70,15 @@ export function init(scene, grid, x, y) {
 export function loop(_scene, _cell, _dt) {}
 
 export function getClickPayload(cell) {
-  const incomePerInterval =
-    cell.occupants === HOUSE_CAPACITY ? HOUSE_FULL_INCOME : 0;
+  // Calculate income based on individual occupants and their professions
+  const villagerIncome = (cell.villagers || 0) * VILLAGER_INCOME;
+  const farmerIncome = (cell.professionCounts?.farmer || 0) * PROFESSIONAL_INCOME;
+  const foresterIncome = (cell.professionCounts?.forester || 0) * PROFESSIONAL_INCOME;
+  const minerIncome = (cell.professionCounts?.miner || 0) * PROFESSIONAL_INCOME;
+  const fishermanIncome = (cell.professionCounts?.fisherman || 0) * PROFESSIONAL_INCOME;
+  
+  const incomePerInterval = villagerIncome + farmerIncome + foresterIncome + minerIncome + fishermanIncome;
+  
   return {
     type: "house",
     built: true,

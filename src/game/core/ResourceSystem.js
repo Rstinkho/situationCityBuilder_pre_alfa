@@ -1,5 +1,5 @@
 import GameModel from "./GameModel";
-import { GOLD_PAYOUT_EVERY_MS, HOUSE_FULL_INCOME, HOUSE_CAPACITY, TILE_SIZE } from "./constants";
+import { GOLD_PAYOUT_EVERY_MS, VILLAGER_INCOME, PROFESSIONAL_INCOME, TILE_SIZE } from "./constants";
 import TimeSystem from "./TimeSystem";
 
 function showFloatingText(scene, x, y, text) {
@@ -21,7 +21,7 @@ function showFloatingText(scene, x, y, text) {
 const ResourceSystem = {
   start(scene) {
     TimeSystem.every(scene, GOLD_PAYOUT_EVERY_MS, () => {
-      let fullHouses = 0;
+      let totalIncome = 0;
       const grid = GameModel.gridData;
       for (let y = 0; y < grid.length; y++) {
         for (let x = 0; x < grid[0].length; x++) {
@@ -29,17 +29,28 @@ const ResourceSystem = {
           if (
             cell.buildingType === "house" &&
             cell.root === cell &&
-            cell.occupants === HOUSE_CAPACITY
+            cell.occupants > 0
           ) {
-            fullHouses += 1;
-            const worldX = x * TILE_SIZE + (cell.width ? (cell.width * TILE_SIZE) / 2 : TILE_SIZE / 2);
-            const worldY = y * TILE_SIZE - 6;
-            const formattedIncome = HOUSE_FULL_INCOME.toFixed(1).replace(".", ",");
-            showFloatingText(scene, worldX, worldY, `+${formattedIncome} gold`);
+            // Calculate income based on individual occupants and their professions
+            const villagerIncome = (cell.villagers || 0) * VILLAGER_INCOME;
+            const farmerIncome = (cell.professionCounts?.farmer || 0) * PROFESSIONAL_INCOME;
+            const foresterIncome = (cell.professionCounts?.forester || 0) * PROFESSIONAL_INCOME;
+            const minerIncome = (cell.professionCounts?.miner || 0) * PROFESSIONAL_INCOME;
+            const fishermanIncome = (cell.professionCounts?.fisherman || 0) * PROFESSIONAL_INCOME;
+            
+            const houseIncome = villagerIncome + farmerIncome + foresterIncome + minerIncome + fishermanIncome;
+            totalIncome += houseIncome;
+            
+            if (houseIncome > 0) {
+              const worldX = x * TILE_SIZE + (cell.width ? (cell.width * TILE_SIZE) / 2 : TILE_SIZE / 2);
+              const worldY = y * TILE_SIZE - 6;
+              const formattedIncome = houseIncome.toFixed(1).replace(".", ",");
+              showFloatingText(scene, worldX, worldY, `+${formattedIncome} gold`);
+            }
           }
         }
       }
-      GameModel.gold += fullHouses * HOUSE_FULL_INCOME;
+      GameModel.gold += totalIncome;
     });
   },
 };

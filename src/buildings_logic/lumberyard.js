@@ -1,6 +1,6 @@
 import GameModel from "../game/core/GameModel";
 import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE, TILE_TYPES, LUMBER_PER_100_EFF_MS, LUMBERYARD_NEARBY_RADIUS } from "../game/core/constants";
-import { store as warehouseStore } from "./warehouse";
+import { store as warehouseStore, isWarehouseFull } from "./warehouse";
 import EventBus from "../game/events/eventBus";
 import TimeSystem from "../game/core/TimeSystem";
 
@@ -39,6 +39,8 @@ export function init(scene, grid, x, y) {
     gatheredTotal: 0,
     availableToDeliver: 0,
     assignedWarehouse: null, // {x,y}
+    deliveryDots: [], // array of moving resource dots
+    incomingDelivery: 0, // count of resources in transit
   };
 
   for (let dy = 0; dy < h; dy++) {
@@ -177,6 +179,13 @@ export function clearTargetTile(scene, x, y) {
 
 export function remove(scene, cell) {
   const root = cell.root || cell;
+  
+  // Remove stored resources from global resources when building is destroyed
+  const availableToDeliver = root.data?.availableToDeliver || 0;
+  if (availableToDeliver > 0 && GameModel.resources) {
+    GameModel.resources.wood = Math.max(0, (GameModel.resources.wood || 0) - availableToDeliver);
+  }
+  
   const workers = root.data?.workers || [];
   while (workers.length) {
     const w = workers.pop();
@@ -195,6 +204,10 @@ export function remove(scene, cell) {
   if (root.data?.assignedIcon) {
     try { root.data.assignedIcon.destroy(); } catch {}
     root.data.assignedIcon = null;
+  }
+  if (root.data?.deliveryDots) {
+    root.data.deliveryDots.forEach((d) => d.destroy());
+    root.data.deliveryDots.length = 0;
   }
   root.building?.destroy();
   const grid = GameModel.gridData;
@@ -238,15 +251,22 @@ function updateProductionTimer(scene, root) {
 
   if (root.data.productionTimer) return; // already producing
 
-  const t = TimeSystem.every(scene, LUMBER_PER_100_EFF_MS, () => {
-    const eff = computeEfficiency(root) / 100;
-    if (eff <= 0) return;
-    GameModel.resources.wood += eff;
-    root.data.gatheredTotal += eff;
-    root.data.availableToDeliver += eff;
-    // try deliver automatically when possible
-    deliverIfReady(scene, root.x, root.y);
-  });
+  	const t = TimeSystem.every(scene, LUMBER_PER_100_EFF_MS, () => {
+		const eff = computeEfficiency(root) / 100;
+		if (eff <= 0) return;
+		
+		// Check resource limit (20)
+		if (root.data.availableToDeliver >= 20) {
+			// Production stops when limit reached
+			return;
+		}
+		
+		GameModel.resources.wood += eff;
+		root.data.gatheredTotal += eff;
+		root.data.availableToDeliver += eff;
+		// try deliver automatically when possible
+		deliverIfReady(scene, root.x, root.y);
+	});
   root.data.productionTimer = t;
 }
 
@@ -256,7 +276,18 @@ export function assignWarehouse(scene, x, y, wx, wy) {
   if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
   const w = grid[wy]?.[wx];
   if (!w || w.buildingType !== BUILDING_TYPES.WAREHOUSE || w.root !== w) return false;
+  
+  // Clear previous warehouse assignment
+  root.data.assignedWarehouse = null;
+  
+  // Set new warehouse assignment
   root.data.assignedWarehouse = { x: wx, y: wy };
+  
+  // Try to resume delivery if we have resources to deliver
+  if (root.data.availableToDeliver >= 4) {
+    deliverIfReady(scene, x, y);
+  }
+  
   return true;
 }
 
@@ -266,13 +297,61 @@ export function deliverIfReady(scene, x, y) {
   if (!root || root.buildingType !== BUILDING_TYPES.LUMBERYARD) return false;
   const wh = root.data.assignedWarehouse ? grid[root.data.assignedWarehouse.y]?.[root.data.assignedWarehouse.x] : null;
   if (!wh || wh.buildingType !== BUILDING_TYPES.WAREHOUSE || wh.root !== wh) return false;
+  
+  // Check if warehouse is full
+  if (isWarehouseFull(wh)) return false;
+  
   const amount = Math.floor(root.data.availableToDeliver);
   if (amount < 4) return false;
-  const stored = warehouseStore(wh, "wood", amount);
-  if (stored > 0) {
-    root.data.availableToDeliver = Math.max(0, root.data.availableToDeliver - stored);
-  }
-  return stored > 0;
+  
+  // Start visual delivery
+  spawnResourceDelivery(scene, root, wh, amount);
+  
+  return true;
+}
+
+export function spawnResourceDelivery(scene, root, warehouse, amount) {
+  // Reserve resources for in-flight delivery
+  const deliveryAmount = Math.min(amount, 4); // Deliver up to 4 at a time
+  root.data.incomingDelivery = (root.data.incomingDelivery || 0) + deliveryAmount;
+  
+  // Create resource icon (wood log)
+  const startX = root.x * TILE_SIZE + (root.width * TILE_SIZE) / 2;
+  const startY = root.y * TILE_SIZE + (root.height * TILE_SIZE) / 2;
+  
+  // Create a simple wood log icon (brown rectangle)
+  const mover = scene.add.graphics();
+  mover.fillStyle(0x8B4513, 1); // Brown color for wood
+  mover.fillRoundedRect(-4, -2, 8, 4, 2);
+  mover.setPosition(startX, startY);
+  mover.setDepth(600);
+  
+  if (!root.data.deliveryDots) root.data.deliveryDots = [];
+  root.data.deliveryDots.push(mover);
+
+  const targetX = warehouse.x * TILE_SIZE + (warehouse.width * TILE_SIZE) / 2;
+  const targetY = warehouse.y * TILE_SIZE + (warehouse.height * TILE_SIZE) / 2;
+  
+  	scene.tweens.add({
+		targets: mover,
+		x: targetX,
+		y: targetY,
+		duration: 4500, // Slower movement as requested
+		ease: "Sine.easeInOut",
+    onComplete: () => {
+      // finalize delivery
+      const stored = warehouseStore(warehouse, "wood", deliveryAmount);
+      if (stored > 0) {
+        root.data.availableToDeliver = Math.max(0, root.data.availableToDeliver - stored);
+      }
+      
+      // cleanup moving resource icon
+      mover.destroy();
+      const idx = root.data.deliveryDots.indexOf(mover);
+      if (idx >= 0) root.data.deliveryDots.splice(idx, 1);
+      root.data.incomingDelivery = Math.max(0, (root.data.incomingDelivery || 0) - deliveryAmount);
+    },
+  });
 }
 
 function withinRadius(bx, by, tx, ty, r) {

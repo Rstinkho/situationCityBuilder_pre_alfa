@@ -1,7 +1,7 @@
 import { POPULATION_CAP_START } from "./constants";
 
 const GameModel = {
-  gold: 100,
+  gold: 200,
   population: {
     current: 0,
     cap: POPULATION_CAP_START,

@@ -280,9 +280,10 @@ function ResourcesPanel() {
   ];
   const warehouses = collectWarehouses();
   const whTotals = sumWarehouseResources(warehouses);
+  const productionTotals = collectProductionBuildingResources();
   return (
     <PanelContainer title="Resources">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Global resources</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
@@ -306,6 +307,20 @@ function ResourcesPanel() {
                 <div>
                   <div style={{ fontWeight: 700 }}>{it.label}</div>
                   <div style={{ opacity: 0.85 }}>{Number(whTotals[it.key] || 0).toFixed(1)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>In production buildings</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+            {[{key: 'wood', label: 'Wood', icon: '🪵'}, {key:'wheat', label:'Wheat', icon:'🌾'}, {key:'stone', label:'Stone', icon:'🪨'}, {key:'fish', label:'Fish', icon:'🐟'}].map(it => (
+              <div key={it.key} style={{ display: "flex", gap: 10, alignItems: "center", background: "#111", border: "1px solid #333", borderRadius: 8, padding: 10 }}>
+                <div style={{ fontSize: 26, width: 34, textAlign: "center" }}>{it.icon}</div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{it.label}</div>
+                  <div style={{ opacity: 0.85 }}>{Number(productionTotals[it.key] || 0).toFixed(1)}</div>
                 </div>
               </div>
             ))}
@@ -339,6 +354,33 @@ function sumWarehouseResources(wares) {
     sum.wheat += s.wheat || 0;
     sum.fish += s.fish || 0;
   });
+  return sum;
+}
+
+function collectProductionBuildingResources() {
+  const grid = GameModel.gridData || [];
+  const sum = { wood: 0, stone: 0, wheat: 0, fish: 0 };
+  
+  for (let y = 0; y < grid.length; y++) {
+    const row = grid[y];
+    if (!row) continue;
+    for (let x = 0; x < row.length; x++) {
+      const cell = row[x];
+      if (!cell || !cell.root || cell.root !== cell) continue;
+      
+      // Check each production building type
+      if (cell.buildingType === BUILDING_TYPES.LUMBERYARD) {
+        sum.wood += cell.data?.availableToDeliver || 0;
+      } else if (cell.buildingType === BUILDING_TYPES.QUARRY) {
+        sum.stone += cell.data?.availableToDeliver || 0;
+      } else if (cell.buildingType === BUILDING_TYPES.FARM) {
+        sum.wheat += cell.data?.availableToDeliver || 0;
+      } else if (cell.buildingType === BUILDING_TYPES.FISHERMAN_HUT) {
+        sum.fish += cell.data?.availableToDeliver || 0;
+      }
+    }
+  }
+  
   return sum;
 }
 

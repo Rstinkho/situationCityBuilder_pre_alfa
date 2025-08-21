@@ -6,7 +6,7 @@ import PopulationSystem from "./core/PopulationSystem";
 import ResourceSystem from "./core/ResourceSystem";
 import handlePointerDown from "../../handlers/handlePointerDown";
 import EventBus from "./events/eventBus";
-import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS, FISHERMAN_HUT_NEARBY_RADIUS, BUILDING_TYPES } from "./core/constants";
+import { TILE_SIZE, TILE_TYPES, LUMBERYARD_NEARBY_RADIUS, QUARRY_NEARBY_RADIUS, FISHERMAN_HUT_NEARBY_RADIUS, BUILDING_TYPES, BUILDING_SIZES } from "./core/constants";
 import { setTargetTile as setLumberTarget, assignWarehouse as assignLumberWarehouse } from "../buildings_logic/lumberyard";
 import { setTargetTile as setQuarryTarget, assignWarehouse as assignQuarryWarehouse } from "../buildings_logic/quarry";
 import { assignWarehouse as assignFarmWarehouse } from "../buildings_logic/farm";
@@ -132,15 +132,19 @@ export default class MainScene extends Phaser.Scene {
         const grid = GameModel.gridData;
         const wh = grid[cy]?.[cx];
         const src = window.__pickAssign;
-        if (wh && wh.buildingType === BUILDING_TYPES.WAREHOUSE && wh.root === wh) {
-          if (src.type === "lumberyard") {
-            assignLumberWarehouse(this, src.x, src.y, cx, cy);
-          } else if (src.type === "quarry") {
-            assignQuarryWarehouse(this, src.x, src.y, cx, cy);
-          } else if (src.type === "farm") {
-            assignFarmWarehouse(this, src.x, src.y, cx, cy);
-          } else if (src.type === "fisherman_hut") {
-            assignFisherWarehouse(this, src.x, src.y, cx, cy);
+        if (wh && wh.buildingType === BUILDING_TYPES.WAREHOUSE) {
+          // Allow clicking on any warehouse tile, find the root for assignment
+          const warehouseRoot = wh.root;
+          if (warehouseRoot && warehouseRoot.buildingType === BUILDING_TYPES.WAREHOUSE) {
+            if (src.type === "lumberyard") {
+              assignLumberWarehouse(this, src.x, src.y, warehouseRoot.x, warehouseRoot.y);
+            } else if (src.type === "quarry") {
+              assignQuarryWarehouse(this, src.x, src.y, warehouseRoot.x, warehouseRoot.y);
+            } else if (src.type === "farm") {
+              assignFarmWarehouse(this, src.x, src.y, warehouseRoot.x, warehouseRoot.y);
+            } else if (src.type === "fisherman_hut") {
+              assignFisherWarehouse(this, src.x, src.y, warehouseRoot.x, warehouseRoot.y);
+            }
           }
         }
         this.clearPickMode();
@@ -298,7 +302,17 @@ export default class MainScene extends Phaser.Scene {
         for (let x = 0; x < grid[0].length; x++) {
           const c = grid[y][x];
           if (c.buildingType === BUILDING_TYPES.WAREHOUSE && c.root === c) {
-            this.drawHighlightTile(x, y, 0x00aaff, 0.3);
+            // Highlight all 3x3 tiles of the warehouse
+            const { w, h } = BUILDING_SIZES[BUILDING_TYPES.WAREHOUSE];
+            for (let dy = 0; dy < h; dy++) {
+              for (let dx = 0; dx < w; dx++) {
+                const highlightX = x + dx;
+                const highlightY = y + dy;
+                if (highlightX < grid[0].length && highlightY < grid.length) {
+                  this.drawHighlightTile(highlightX, highlightY, 0x00aaff, 0.3);
+                }
+              }
+            }
           }
         }
       }

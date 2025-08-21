@@ -7,7 +7,9 @@ export const HOUSE_CAPACITY = 4;
 
 export const VILLAGER_ARRIVAL_EVERY_MS = 3000;
 export const GOLD_PAYOUT_EVERY_MS = 10000;
-export const HOUSE_FULL_INCOME = 0.1;
+export const HOUSE_FULL_INCOME = 0.1; // Legacy - no longer used
+export const VILLAGER_INCOME = 0.1;
+export const PROFESSIONAL_INCOME = 0.2;
 
 export const TILE_TYPES = {
   PLAINS: "plains",

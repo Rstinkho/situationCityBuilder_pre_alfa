@@ -8,6 +8,7 @@ import * as Farm from "../buildings_logic/farm";
 import * as TrainingCenter from "../buildings_logic/training_center";
 import * as Quarry from "../buildings_logic/quarry";
 import * as FishermanHut from "../buildings_logic/fisherman_hut";
+import * as Warehouse from "../buildings_logic/warehouse";
 import TrainingCenterPanel from "./buildings/TrainingCenterPanel";
 import HousePanel from "./buildings/HousePanel";
 import LumberyardPanel from "./buildings/LumberyardPanel";
@@ -45,6 +46,9 @@ export default function BuildingUI({ open, payload, onClose }) {
       } else if (data.type === "training_center") {
         const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
         if (root) setData(TrainingCenter.getClickPayload(root));
+      } else if (data.type === "warehouse") {
+        const root = GameModel.gridData?.[data.rootY]?.[data.rootX];
+        if (root) setData(Warehouse.getClickPayload(root));
       }
     }, 500);
     return () => clearInterval(id);
@@ -102,6 +106,8 @@ function destroyBuilding(data, onClose) {
     Farm.remove(window.__phaserScene, root);
   } else if (data.type === "training_center") {
     TrainingCenter.remove(window.__phaserScene, root);
+  } else if (data.type === "warehouse") {
+    Warehouse.remove(window.__phaserScene, root);
   }
   onClose();
 }
