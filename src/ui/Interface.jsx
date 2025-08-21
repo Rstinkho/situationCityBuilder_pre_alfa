@@ -49,7 +49,7 @@ export default function Interface() {
           setAdminTileType={setAdminTileType}
         />
       )}
-      <DefenseBuildingsPanel />
+      {tab === "construction" && <DefenseBuildingsPanel />}
     </div>
   );
 }

@@ -15,10 +15,12 @@ export default class DefenseScene extends Phaser.Scene {
     const gw = Number(this.sys.game.config.width);
     const gh = Number(this.sys.game.config.height);
 
-    const w = Math.floor(gw * 0.5);
-    const h = Math.floor(gh * 0.4);
-    const x = Math.floor(gw - w - 12);
-    const y = Math.floor(gh - h - 12);
+    // Make defense screen wider and place it under interface (top-right area)
+    const w = Math.floor(gw * 0.6);
+    const h = Math.floor(gh * 0.45);
+    const margin = 12;
+    const x = Math.floor(gw - w - margin);
+    const y = Math.floor(margin + 100); // push under top interface panels
 
     this.cameras.main.setViewport(x, y, w, h);
     this.cameras.main.setBackgroundColor(0x121416);
@@ -103,11 +105,15 @@ export default class DefenseScene extends Phaser.Scene {
     const cell = DefenseModel.grid?.[cy]?.[cx];
     if (!cell || cell.tower) return;
 
-    const x = cx * TILE_SIZE + TILE_SIZE / 2;
-    const y = cy * TILE_SIZE + TILE_SIZE / 2;
-    const tower = this.add.rectangle(x, y, TILE_SIZE - 6, TILE_SIZE - 6, 0x8d8f3a);
-    tower.setStrokeStyle(1, 0xc5c87a);
+    const x = cx * TILE_SIZE + 1 + (TILE_SIZE - 2) / 2;
+    const y = cy * TILE_SIZE + 1 + (TILE_SIZE - 2) / 2;
+    const tower = this.add.image(x, y, "tower_frame_1");
+    tower.setDisplaySize(TILE_SIZE - 2, TILE_SIZE - 2);
+    tower.setOrigin(0.5, 0.5);
     tower.setDepth(3);
+    const frames = ["tower_frame_1", "tower_frame_2", "tower_frame_3"];
+    let fi = 0;
+    this.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { tower.setTexture(frames[fi]); } catch {} } });
 
     const towerObj = { cx, cy, sprite: tower, lastShotMs: 0, cooldownMs: 900 };
     DefenseModel.towers.push(towerObj);
@@ -115,83 +121,111 @@ export default class DefenseScene extends Phaser.Scene {
   }
 
   launchAttack() {
-    if (DefenseModel.enemy) return; // only one at a time
     const v = DefenseModel.viewport;
     const startX = v.w - 10;
-    const startY = Math.floor(v.h * 0.5);
+    const startY = Math.floor(v.h * (0.3 + Math.random() * 0.4));
     const enemy = this.add.circle(startX, startY, Math.max(4, Math.floor(TILE_SIZE / 3)), 0xa33a3a);
     enemy.setDepth(4);
-    DefenseModel.enemy = { sprite: enemy, hp: 100, speed: Math.max(40, Math.floor(v.w * 0.12)) };
+    const speed = Math.max(40, Math.floor(v.w * (0.10 + Math.random() * 0.05)));
+    const hp = 100;
+    const id = DefenseModel.nextEnemyId++;
 
     // Simple HP bar
     const hpBg = this.add.rectangle(startX, startY - 10, 26, 4, 0x222222).setDepth(5);
     const hpFill = this.add.rectangle(startX, startY - 10, 26, 4, 0x4caf50).setDepth(6);
-    DefenseModel.enemy.hpBg = hpBg;
-    DefenseModel.enemy.hpFill = hpFill;
 
-    this.events.on("update", this.updateEnemy, this);
+    const enemyObj = { id, sprite: enemy, hp, speed, hpBg, hpFill };
+    DefenseModel.enemies.push(enemyObj);
+
+    if (!this.__updateBound) {
+      this.events.on("update", this.updateEnemies, this);
+      this.__updateBound = true;
+    }
   }
 
-  updateEnemy(time, delta) {
-    const enemy = DefenseModel.enemy;
-    if (!enemy) return;
+  updateEnemies(time, delta) {
     const v = DefenseModel.viewport;
-    const pxPerMs = enemy.speed / 1000;
-    enemy.sprite.x -= pxPerMs * delta;
-    if (enemy.hpBg && enemy.hpFill) {
-      enemy.hpBg.x = enemy.sprite.x;
-      enemy.hpFill.x = enemy.sprite.x;
+    const enemies = DefenseModel.enemies;
+    if (!enemies || enemies.length === 0) return;
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      const pxPerMs = enemy.speed / 1000;
+      enemy.sprite.x -= pxPerMs * delta;
+      if (enemy.hpBg && enemy.hpFill) {
+        enemy.hpBg.x = enemy.sprite.x;
+        enemy.hpFill.x = enemy.sprite.x;
+      }
+      if (enemy.sprite.x <= 0) {
+        this.onBreach(enemy);
+        enemies.splice(i, 1);
+      }
     }
 
-    if (enemy.sprite.x <= 0) {
-      this.onBreach();
-      return;
+    if (enemies.length === 0 && this.__updateBound) {
+      this.events.off("update", this.updateEnemies, this);
+      this.__updateBound = false;
     }
   }
 
-  onBreach() {
-    const enemy = DefenseModel.enemy;
+  onBreach(enemy) {
     if (enemy) {
       enemy.sprite.destroy();
       enemy.hpBg?.destroy();
       enemy.hpFill?.destroy();
     }
-    DefenseModel.enemy = null;
-    // wipe resources
+    // wipe only resources stored inside warehouses
     try {
-      const res = GameModel.resources || {};
-      res.wood = 0;
-      res.wheat = 0;
-      res.stone = 0;
-      res.fish = 0;
+      const grid = GameModel.gridData || [];
+      for (let y = 0; y < grid.length; y++) {
+        const row = grid[y];
+        if (!row) continue;
+        for (let x = 0; x < row.length; x++) {
+          const cell = row[x];
+          if (cell && cell.root === cell && cell.buildingType === "warehouse") {
+            const storage = cell.data?.storage;
+            if (storage) {
+              storage.wood = 0;
+              storage.stone = 0;
+              storage.wheat = 0;
+              storage.fish = 0;
+            }
+          }
+        }
+      }
     } catch (_) {}
     alert("U vas spizdili vse resursi");
-    this.events.off("update", this.updateEnemy, this);
   }
 
   towerAI() {
-    const enemy = DefenseModel.enemy;
-    if (!enemy) return;
+    const enemies = DefenseModel.enemies || [];
+    if (enemies.length === 0) return;
     const v = DefenseModel.viewport;
     const radius = v.w * 0.4;
-    const ex = enemy.sprite.x;
-    const ey = enemy.sprite.y;
 
     const now = this.time.now;
     for (const t of DefenseModel.towers) {
-      const tx = t.sprite.x;
-      const ty = t.sprite.y;
-      const dx = ex - tx;
-      const dy = ey - ty;
-      const dist = Math.hypot(dx, dy);
-      if (dist <= radius && now - (t.lastShotMs || 0) >= (t.cooldownMs || 900)) {
+      if (now - (t.lastShotMs || 0) < (t.cooldownMs || 900)) continue;
+      // find the nearest enemy in range
+      let target = null;
+      let bestDist = Infinity;
+      for (const e of enemies) {
+        const dx = e.sprite.x - t.sprite.x;
+        const dy = e.sprite.y - t.sprite.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= radius && dist < bestDist) {
+          bestDist = dist;
+          target = e;
+        }
+      }
+      if (target) {
         t.lastShotMs = now;
-        this.fireArrow(tx, ty, ex, ey);
+        this.fireArrow(t.sprite.x, t.sprite.y, target.sprite.x, target.sprite.y, target.id);
       }
     }
   }
 
-  fireArrow(sx, sy, tx, ty) {
+  fireArrow(sx, sy, tx, ty, targetId) {
     const arrow = this.add.triangle(sx, sy, 0, 5, 12, 0, 0, -5, 0xffffff);
     arrow.setDepth(6);
     const dx = tx - sx;
@@ -200,7 +234,7 @@ export default class DefenseScene extends Phaser.Scene {
     const duration = Math.max(250, Math.min(600, Math.floor(dist * 4)));
     const arc = Math.max(20, Math.min(120, dist * 0.25));
 
-    const tween = this.tweens.addCounter({
+    this.tweens.addCounter({
       from: 0,
       to: 1,
       duration,
@@ -215,16 +249,16 @@ export default class DefenseScene extends Phaser.Scene {
       },
       onComplete: () => {
         arrow.destroy();
-        if (DefenseModel.enemy) {
-          this.hitEnemy();
-        }
+        this.hitEnemy(targetId);
       },
     });
   }
 
-  hitEnemy() {
-    const enemy = DefenseModel.enemy;
-    if (!enemy) return;
+  hitEnemy(targetId) {
+    const enemies = DefenseModel.enemies || [];
+    const idx = enemies.findIndex((e) => e.id === targetId);
+    if (idx === -1) return;
+    const enemy = enemies[idx];
     enemy.hp = Math.max(0, enemy.hp - 25);
     if (enemy.hpFill) {
       const pct = enemy.hp / 100;
@@ -235,8 +269,11 @@ export default class DefenseScene extends Phaser.Scene {
       enemy.sprite.destroy();
       enemy.hpBg?.destroy();
       enemy.hpFill?.destroy();
-      DefenseModel.enemy = null;
-      this.events.off("update", this.updateEnemy, this);
+      enemies.splice(idx, 1);
+      if (enemies.length === 0 && this.__updateBound) {
+        this.events.off("update", this.updateEnemies, this);
+        this.__updateBound = false;
+      }
     }
   }
 }

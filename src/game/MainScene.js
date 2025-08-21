@@ -238,17 +238,18 @@ export default class MainScene extends Phaser.Scene {
       { base: "quarry", color: 0x7f8c8d },
       { base: "fisher", color: 0x3498db },
       { base: "warehouse", color: 0xb2955b },
+      { base: "tower", color: 0x8d8f3a },
     ];
     defs.forEach(({ base, color }) => {
       for (let i = 1; i <= 3; i++) {
         const g = this.add.graphics();
-        const w = TILE_SIZE * (base === "training" ? 3 : 2) - 2;
-        const h = TILE_SIZE * 2 - 2;
+        const w = base === "tower" ? TILE_SIZE - 2 : TILE_SIZE * (base === "training" ? 3 : 2) - 2;
+        const h = base === "tower" ? TILE_SIZE - 2 : TILE_SIZE * 2 - 2;
         g.fillStyle(color, 1);
         g.fillRoundedRect(0, 0, w, h, 4);
         // add a small animated accent varying by frame
         g.fillStyle(0xffffff, 0.15 * i);
-        g.fillRect(4, 4, Math.max(4, w * 0.3), 6);
+        g.fillRect(4, 4, Math.max(4, Math.floor(w * 0.3)), 6);
         g.generateTexture(`${base}_frame_${i}`, w, h);
         g.destroy();
       }
