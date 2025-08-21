@@ -107,8 +107,16 @@ export default class MainScene extends Phaser.Scene {
     this.generateBuildingTextures();
     this.generateHudIconTextures();
 
+    // Launch tower defense scene
+    this.scene.launch("DefenseScene");
+
     Pointer.init(this);
     this.input.on("pointerdown", (p) => {
+      // Ignore clicks inside the tower defense viewport
+      const vp = window.__tdViewport;
+      if (vp && p.x >= vp.x && p.x <= vp.x + vp.w && p.y >= vp.y && p.y <= vp.y + vp.h) {
+        return;
+      }
       if (window.__pickLumberTile) {
         const { cx, cy } = Grid.worldToCell(p.worldX, p.worldY);
         const ok = setLumberTarget(this, window.__pickLumberTile.x, window.__pickLumberTile.y, cx, cy);

@@ -8,6 +8,7 @@ import {
 } from "../game/core/constants";
 import Grid from "../game/core/Grid";
 import { saveTilesToSupabase } from "../utils/supabase";
+import EventBus from "../game/events/eventBus";
 
 import house_img from "../assets/buildings_img/house.png";
 import training_img from "../assets/buildings_img/training.png";
@@ -48,6 +49,7 @@ export default function Interface() {
           setAdminTileType={setAdminTileType}
         />
       )}
+      <DefenseBuildingsPanel />
     </div>
   );
 }
@@ -384,6 +386,44 @@ function collectProductionBuildingResources() {
   return sum;
 }
 
+function DefenseBuildingsPanel() {
+  const onPlaceTower = () => {
+    window.__tdPlaceTower = true;
+  };
+  const cardStyle = {
+    display: "grid",
+    gridTemplateColumns: "56px 1fr auto",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+    background: "#1a1a1a",
+    borderRadius: 8,
+    border: "1px solid #333",
+  };
+  return (
+    <PanelContainer title="Defense Buildings">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+        <div style={cardStyle}>
+          <div style={{ width: 56, height: 56, background: "#111", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid #333" }}>
+            <div style={{ fontSize: 28 }}>🏹</div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700 }}>Tower</div>
+            <div style={{ opacity: 0.85, marginTop: 4 }}>Cost: 0g</div>
+          </div>
+          <button
+            onClick={onPlaceTower}
+            style={{ padding: "8px 10px", borderRadius: 8, background: "#2e7d32", border: "1px solid #3fa143", color: "#fff", cursor: "pointer" }}
+            title="Place tower in defense screen"
+          >
+            Place
+          </button>
+        </div>
+      </div>
+    </PanelContainer>
+  );
+}
+
 function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }) {
   const scene = window.__phaserScene;
 
@@ -418,6 +458,10 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
     }
   };
 
+  const launchAttack = () => {
+    EventBus.emit("td-launch-attack");
+  };
+
   const btn = {
     padding: "8px 10px",
     borderRadius: 8,
@@ -449,12 +493,15 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
   return (
     <PanelContainer title="Admin Mode">
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <button style={btn} onClick={startAssign}>
             Assign tile
           </button>
           <button style={btn} onClick={onSave}>
             Save
+          </button>
+          <button style={btn} onClick={launchAttack}>
+            Launch attack
           </button>
           <div style={{ opacity: 0.9 }}>
             {adminMode
