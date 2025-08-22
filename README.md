@@ -28,21 +28,18 @@ Open the URL Vite prints (usually http://localhost:5173).
 
 
 //nearest short-term fixes
-to fix (warehouse):
-assign warehouse - only one tile available for warehouse assignment, make all 9 tiles available (highlight them) -- DONE
-implement dynamic resources in warehouse no need to click to refresh -- DONE
-destroy button need to fix for warehouse -- DONE
-implement graphical movement for resources inside warehouse (the same as for incoming villagers) -- DONE
-when we re-assign warehouse with available resources. it should move in a bulk of 4
-work on assigning warehouse button when producting building is full with resources
-
-to fix (house):
-income level increase not per fullfilment but per occupant. Normal villager + 0.1, proffesional + 0.2, master + 0.3 -- DONE
+to fix (UI):
+blinking in construction and sometimes when we clck we dont choose building -- PERSIST 
+same sprite logic for building in tower defence canvas -- DONE
 
 to fix (all production building):
-if resource available become > 20, production stops with the warning inside the interface -- DONE
-resource needed for construction also substract from available or from warehouse -- Need to implement resiurce cost first not only gold, 2nd stage 0.2
-show message warehouse is full when button is red -- DONE
+resource needed for construction also substract from available or from warehouse -- Need to implement resource cost first not only gold, 2nd stage 0.2;
+
+game (overall):
+when we switch the game, it pause, but functions still running. Also, it seems like it relaunch the 1st quest after we getting first 4 resources to warehouse. Need to make it run probably even if it switched. Or make global pause for all function dont refresh anything also.
+
+
+
 
 //first pre-alfa milestone build to enter 0.2
 Building and production system demonstration;

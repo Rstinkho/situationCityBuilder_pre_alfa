@@ -9,6 +9,7 @@ import * as Farm from "../src/buildings_logic/farm";
 import * as Quarry from "../src/buildings_logic/quarry";
 import * as FishermanHut from "../src/buildings_logic/fisherman_hut";
 import * as Warehouse from "../src/buildings_logic/warehouse";
+import * as Tower from "../src/buildings_logic/tower";
 import EventBus from "../src/game/events/eventBus";
 
 export default function handlePointerDown(scene, pointer) {
@@ -23,6 +24,9 @@ export default function handlePointerDown(scene, pointer) {
 			Pointer.clear(scene);
 			return;
 		}
+		
+
+		
 		if (canPlaceOnPlains(grid, cx, cy, w, h) && canPlace(grid, cx, cy, w, h)) {
 			switch (Pointer.selected) {
 				case BUILDING_TYPES.HOUSE:
@@ -82,6 +86,8 @@ export default function handlePointerDown(scene, pointer) {
 				? FishermanHut.getClickPayload(target)
 				: target.buildingType === BUILDING_TYPES.FARM
 				? Farm.getClickPayload(target)
+				: target.buildingType === BUILDING_TYPES.TOWER
+				? Tower.getClickPayload(target)
 				: null;
 
 		if (payload) EventBus.emit("open-building-ui", payload);

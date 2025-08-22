@@ -2,7 +2,7 @@ export const TILE_SIZE = 24;
 export const GRID_WIDTH = 42;
 export const GRID_HEIGHT = 42;
 
-export const POPULATION_CAP_START = 10;
+export const POPULATION_CAP_START = 16;
 export const HOUSE_CAPACITY = 4;
 
 export const VILLAGER_ARRIVAL_EVERY_MS = 3000;
@@ -27,6 +27,7 @@ export const BUILDING_TYPES = {
   FARM_FIELD: "farm_field",
   FISHERMAN_HUT: "fisherman_hut",
   WAREHOUSE: "warehouse",
+  TOWER: "tower",
 };
 
 export const BUILDING_SIZES = {
@@ -38,6 +39,7 @@ export const BUILDING_SIZES = {
   [BUILDING_TYPES.FARM_FIELD]: { w: 1, h: 1 },
   [BUILDING_TYPES.FISHERMAN_HUT]: { w: 2, h: 2 },
   [BUILDING_TYPES.WAREHOUSE]: { w: 3, h: 3 },
+  [BUILDING_TYPES.TOWER]: { w: 1, h: 2 },
 };
 
 export const LUMBER_PER_100_EFF_MS = 20000;
@@ -57,4 +59,5 @@ export const BUILDING_COSTS = {
   [BUILDING_TYPES.FARM_FIELD]: 0,
   [BUILDING_TYPES.FISHERMAN_HUT]: 30,
   [BUILDING_TYPES.WAREHOUSE]: 40,
+  [BUILDING_TYPES.TOWER]: 50,
 };

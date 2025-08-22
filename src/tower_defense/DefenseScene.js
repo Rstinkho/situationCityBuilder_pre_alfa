@@ -1,6 +1,6 @@
 import GameModel from "../game/core/GameModel";
 import EventBus from "../game/events/eventBus";
-import { TILE_SIZE } from "../game/core/constants";
+import { TILE_SIZE, BUILDING_COSTS, BUILDING_TYPES } from "../game/core/constants";
 import DefenseModel from "./DefenseModel";
 
 export default class DefenseScene extends Phaser.Scene {
@@ -9,20 +9,24 @@ export default class DefenseScene extends Phaser.Scene {
     this._offLaunch = null;
     this._border = null;
     this._gridLines = null;
+    this._buildingPreview = null;
+    this._selectedBuildingType = null;
+    this._attackTimer = null;
+    this._attackTimerText = null;
   }
 
   create() {
     const gw = Number(this.sys.game.config.width);
     const gh = Number(this.sys.game.config.height);
 
-    // Make defense screen wider and place it under interface (top-right area)
-    const w = Math.floor(gw * 0.6);
-    const h = Math.floor(gh * 0.45);
-    const margin = 12;
-    const x = Math.floor(gw - w - margin);
-    const y = Math.floor(margin + 100); // push under top interface panels
+    // Use the full dimensions of the tower defense container
+    const w = gw;
+    const h = gh;
+    const x = 0;
+    const y = 0;
 
-    this.cameras.main.setViewport(x, y, w, h);
+    // No need to set viewport since this scene has its own game instance
+    // this.cameras.main.setViewport(x, y, w, h);
     this.cameras.main.setBackgroundColor(0x121416);
 
     DefenseModel.viewport = { x, y, w, h };
@@ -32,10 +36,22 @@ export default class DefenseScene extends Phaser.Scene {
     this.createGrid(w, h);
 
     this.input.on("pointerdown", (p) => this.onPointerDown(p));
+    this.input.on("pointermove", (p) => this.onPointerMove(p));
+    this.input.keyboard.on("keydown-ESC", () => this.cancelBuildingMode());
+
+    // Create building preview
+    this._buildingPreview = this.add.rectangle(0, 0, TILE_SIZE - 2, TILE_SIZE * 2 - 2, 0xffffff, 0.3);
+    this._buildingPreview.setOrigin(0, 0);
+    this._buildingPreview.setVisible(false);
+    this._buildingPreview.setDepth(10);
+
+    // Make this scene globally accessible
+    window.__defenseScene = this;
 
     this._offLaunch = EventBus.on("td-launch-attack", () => this.launchAttack());
 
     this.time.addEvent({ delay: 250, loop: true, callback: () => this.towerAI() });
+    this.time.addEvent({ delay: 100, loop: true, callback: () => this.updateBuildingMode() });
   }
 
   shutdown() {
@@ -83,41 +99,111 @@ export default class DefenseScene extends Phaser.Scene {
     this._gridLines = g;
   }
 
+  onPointerMove(pointer) {
+    if (window.__tdPlaceTower && this._buildingPreview) {
+      const localX = pointer.x;
+      const localY = pointer.y;
+      const cx = Math.floor(localX / TILE_SIZE);
+      const cy = Math.floor(localY / TILE_SIZE);
+      
+      // Snap to grid
+      const x = cx * TILE_SIZE + 1;
+      const y = cy * TILE_SIZE + 1;
+      this._buildingPreview.setPosition(x, y);
+      this._buildingPreview.setVisible(true);
+      
+      // Check if placement is valid and change color accordingly
+      const canPlace = this.canPlaceTower(cx, cy);
+      this._buildingPreview.setFillStyle(canPlace ? 0x00ff00 : 0xff0000, 0.3);
+    }
+  }
+
+  cancelBuildingMode() {
+    if (window.__tdPlaceTower) {
+      window.__tdPlaceTower = false;
+      window.__tdTowerType = null;
+      this.input.setDefaultCursor("default");
+      if (this._buildingPreview) {
+        this._buildingPreview.setVisible(false);
+      }
+    }
+  }
+
+  updateBuildingMode() {
+    if (window.__tdPlaceTower) {
+      if (!this._buildingPreview.visible) {
+        this.input.setDefaultCursor("crosshair");
+      }
+    } else {
+      if (this._buildingPreview && this._buildingPreview.visible) {
+        this._buildingPreview.setVisible(false);
+        this.input.setDefaultCursor("default");
+      }
+    }
+  }
+
   onPointerDown(pointer) {
-    const v = DefenseModel.viewport;
-    if (!v) return;
-    const within = pointer.x >= v.x && pointer.x <= v.x + v.w && pointer.y >= v.y && pointer.y <= v.y + v.h;
-    if (!within) return;
+    // Since this scene now has its own game instance, coordinates are already local
+    const localX = pointer.x;
+    const localY = pointer.y;
 
     if (window.__tdPlaceTower) {
-      const localX = pointer.x - v.x;
-      const localY = pointer.y - v.y;
       const cx = Math.floor(localX / TILE_SIZE);
       const cy = Math.floor(localY / TILE_SIZE);
       this.placeTower(cx, cy);
       window.__tdPlaceTower = false;
+      window.__tdTowerType = null;
+      this.input.setDefaultCursor("default");
       return;
     }
   }
 
-  placeTower(cx, cy) {
-    if (cx < 0 || cy < 0 || cx >= DefenseModel.cols || cy >= DefenseModel.rows) return;
+  canPlaceTower(cx, cy) {
+    if (cx < 0 || cy < 0 || cx >= DefenseModel.cols || cy >= DefenseModel.rows) return false;
+    
+    // Check if we can place a 2-tile high tower
+    if (cy + 1 >= DefenseModel.rows) return false; // Need space for 2 tiles vertically
+    
     const cell = DefenseModel.grid?.[cy]?.[cx];
-    if (!cell || cell.tower) return;
+    const cellBelow = DefenseModel.grid?.[cy + 1]?.[cx];
+    
+    return cell && !cell.tower && cellBelow && !cellBelow.tower;
+  }
 
-    const x = cx * TILE_SIZE + 1 + (TILE_SIZE - 2) / 2;
-    const y = cy * TILE_SIZE + 1 + (TILE_SIZE - 2) / 2;
+  placeTower(cx, cy) {
+    if (!this.canPlaceTower(cx, cy)) return;
+
+    // Check if we have enough gold
+    const towerCost = BUILDING_COSTS[BUILDING_TYPES.TOWER];
+    if (GameModel.gold < towerCost) {
+      alert("Not enough gold to place tower!");
+      return;
+    }
+
+    // Deduct gold and place tower
+    GameModel.gold -= towerCost;
+    
+    const cell = DefenseModel.grid[cy][cx];
+    const cellBelow = DefenseModel.grid[cy + 1][cx];
+
+    // Use same coordinate calculation as preview
+    const x = cx * TILE_SIZE + 1;
+    const y = cy * TILE_SIZE + 1;
     const tower = this.add.image(x, y, "tower_frame_1");
-    tower.setDisplaySize(TILE_SIZE - 2, TILE_SIZE - 2);
-    tower.setOrigin(0.5, 0.5);
+    tower.setDisplaySize(TILE_SIZE - 2, TILE_SIZE * 2 - 2); // 2 tiles high
+    tower.setOrigin(0, 0); // Anchor to top-left to match preview alignment
     tower.setDepth(3);
+    
     const frames = ["tower_frame_1", "tower_frame_2", "tower_frame_3"];
     let fi = 0;
     this.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { tower.setTexture(frames[fi]); } catch {} } });
 
     const towerObj = { cx, cy, sprite: tower, lastShotMs: 0, cooldownMs: 900 };
     DefenseModel.towers.push(towerObj);
+    
+    // Mark both cells as occupied by the tower
     cell.tower = towerObj;
+    cellBelow.tower = towerObj;
   }
 
   launchAttack() {
@@ -144,7 +230,6 @@ export default class DefenseScene extends Phaser.Scene {
   }
 
   updateEnemies(time, delta) {
-    const v = DefenseModel.viewport;
     const enemies = DefenseModel.enemies;
     if (!enemies || enemies.length === 0) return;
 
@@ -174,27 +259,54 @@ export default class DefenseScene extends Phaser.Scene {
       enemy.hpBg?.destroy();
       enemy.hpFill?.destroy();
     }
-    // wipe only resources stored inside warehouses
-    try {
-      const grid = GameModel.gridData || [];
-      for (let y = 0; y < grid.length; y++) {
-        const row = grid[y];
-        if (!row) continue;
-        for (let x = 0; x < row.length; x++) {
-          const cell = row[x];
-          if (cell && cell.root === cell && cell.buildingType === "warehouse") {
-            const storage = cell.data?.storage;
-            if (storage) {
-              storage.wood = 0;
-              storage.stone = 0;
-              storage.wheat = 0;
-              storage.fish = 0;
-            }
-          }
-        }
+    
+    // Steal 5 gold from the player
+    if (GameModel.gold !== undefined) {
+      GameModel.gold -= 5;
+      
+      // Show gold stolen message
+      this.showGoldStolenMessage();
+      
+      // Check for game over condition
+      if (GameModel.gold < 0) {
+        this.triggerGameOver();
       }
-    } catch (_) {}
-    alert("U vas spizdili vse resursi");
+    }
+  }
+
+  showGoldStolenMessage() {
+    // Create temporary message
+    const message = this.add.text(100, 80, "5 GOLD STOLEN!", {
+      fontSize: "20px",
+      color: "#ff4444",
+      fontStyle: "bold",
+      stroke: "#000000",
+      strokeThickness: 3
+    });
+    message.setOrigin(0.5);
+    message.setDepth(25);
+    
+    // Animate the message
+    this.tweens.add({
+      targets: message,
+      y: 60,
+      alpha: 0,
+      duration: 2000,
+      ease: "Power2",
+      onComplete: () => {
+        message.destroy();
+      }
+    });
+  }
+
+  triggerGameOver() {
+    // Stop all game systems
+    if (window.__questSystem) {
+      window.__questSystem.stop();
+    }
+    
+    // Emit game over event with final score
+    EventBus.emit("game-over", GameModel.gold);
   }
 
   towerAI() {
@@ -275,5 +387,49 @@ export default class DefenseScene extends Phaser.Scene {
         this.__updateBound = false;
       }
     }
+  }
+
+  // Show attack timer on tower defense screen
+  showAttackTimer() {
+    if (this._attackTimer) {
+      this._attackTimer.destroy();
+    }
+    if (this._attackTimerText) {
+      this._attackTimerText.destroy();
+    }
+
+    // Create timer background
+    this._attackTimer = this.add.rectangle(100, 30, 200, 40, 0x8b0000, 0.8);
+    this._attackTimer.setDepth(20);
+    
+    // Create timer text
+    this._attackTimerText = this.add.text(100, 30, "ATTACK IN: 30s", {
+      fontSize: "16px",
+      color: "#ffffff",
+      fontStyle: "bold"
+    });
+    this._attackTimerText.setOrigin(0.5);
+    this._attackTimerText.setDepth(21);
+
+    // Start countdown
+    let timeLeft = 30;
+    const countdown = setInterval(() => {
+      timeLeft--;
+      if (this._attackTimerText) {
+        this._attackTimerText.setText(`ATTACK IN: ${timeLeft}s`);
+      }
+      
+      if (timeLeft <= 0) {
+        clearInterval(countdown);
+        if (this._attackTimer) {
+          this._attackTimer.destroy();
+          this._attackTimer = null;
+        }
+        if (this._attackTimerText) {
+          this._attackTimerText.destroy();
+          this._attackTimerText = null;
+        }
+      }
+    }, 1000);
   }
 }
