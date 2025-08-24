@@ -5,9 +5,9 @@ const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export async function saveTilesToSupabase(tyles) {
+export async function saveTilesToSupabase(tiles) {
   try {
-    const { data, error } = await supabase.from("game_test").insert([{ tyles }]);
+    const { data, error } = await supabase.from("game_test").insert([{ tiles }]);
     return { data, error };
   } catch (error) {
     return { data: null, error };

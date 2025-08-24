@@ -15,6 +15,18 @@ export default class DefenseScene extends Phaser.Scene {
     this._attackTimerText = null;
   }
 
+  preload() {
+    // Load tower defense spritesheets
+    this.load.spritesheet("tower_defense", "src/buildings_logic/tower_idle.png", {
+      frameWidth: 60,
+      frameHeight: 88,
+    });
+    this.load.spritesheet("attacker_walk", "src/assets/characters/attacker_walk.png", {
+      frameWidth: 30,
+      frameHeight: 44,
+    });
+  }
+
   create() {
     const gw = Number(this.sys.game.config.width);
     const gh = Number(this.sys.game.config.height);
@@ -38,6 +50,9 @@ export default class DefenseScene extends Phaser.Scene {
     this.input.on("pointerdown", (p) => this.onPointerDown(p));
     this.input.on("pointermove", (p) => this.onPointerMove(p));
     this.input.keyboard.on("keydown-ESC", () => this.cancelBuildingMode());
+
+    // Create animations for tower defense
+    this.createAnimations();
 
     // Create building preview
     this._buildingPreview = this.add.rectangle(0, 0, TILE_SIZE - 2, TILE_SIZE * 2 - 2, 0xffffff, 0.3);
@@ -86,17 +101,36 @@ export default class DefenseScene extends Phaser.Scene {
       DefenseModel.grid.push(row);
     }
 
-    if (this._gridLines) this._gridLines.destroy();
-    const g = this.add.graphics();
-    g.lineStyle(1, 0x2f3338, 1);
-    for (let yy = 0; yy <= rows; yy++) {
-      g.strokeLineShape({ x1: 0, y1: yy * TILE_SIZE, x2: cols * TILE_SIZE, y2: yy * TILE_SIZE });
+    // Grid lines removed for cleaner appearance
+    // No visual grid will be displayed
+  }
+
+  createAnimations() {
+    // Create tower defense animation
+    if (!this.anims.exists("tower_defense_anim")) {
+      this.anims.create({
+        key: "tower_defense_anim",
+        frames: this.anims.generateFrameNumbers("tower_defense", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 3,
+        repeat: -1,
+      });
     }
-    for (let xx = 0; xx <= cols; xx++) {
-      g.strokeLineShape({ x1: xx * TILE_SIZE, y1: 0, x2: xx * TILE_SIZE, y2: rows * TILE_SIZE });
+
+    // Create attacker walk animation
+    if (!this.anims.exists("attacker_walk_anim")) {
+      this.anims.create({
+        key: "attacker_walk_anim",
+        frames: this.anims.generateFrameNumbers("attacker_walk", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
     }
-    g.setDepth(1);
-    this._gridLines = g;
   }
 
   onPointerMove(pointer) {
@@ -151,8 +185,7 @@ export default class DefenseScene extends Phaser.Scene {
       const cx = Math.floor(localX / TILE_SIZE);
       const cy = Math.floor(localY / TILE_SIZE);
       this.placeTower(cx, cy);
-      window.__tdPlaceTower = false;
-      window.__tdTowerType = null;
+      // Note: placeTower() now handles clearing the selection state
       this.input.setDefaultCursor("default");
       return;
     }
@@ -189,14 +222,11 @@ export default class DefenseScene extends Phaser.Scene {
     // Use same coordinate calculation as preview
     const x = cx * TILE_SIZE + 1;
     const y = cy * TILE_SIZE + 1;
-    const tower = this.add.image(x, y, "tower_frame_1");
-    tower.setDisplaySize(TILE_SIZE - 2, TILE_SIZE * 2 - 2); // 2 tiles high
+    const tower = this.add.sprite(x, y, "tower_defense");
+    tower.play("tower_defense_anim");
+    tower.setDisplaySize(60, 88); // Use original spritesheet dimensions
     tower.setOrigin(0, 0); // Anchor to top-left to match preview alignment
     tower.setDepth(3);
-    
-    const frames = ["tower_frame_1", "tower_frame_2", "tower_frame_3"];
-    let fi = 0;
-    this.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { tower.setTexture(frames[fi]); } catch {} } });
 
     const towerObj = { cx, cy, sprite: tower, lastShotMs: 0, cooldownMs: 900 };
     DefenseModel.towers.push(towerObj);
@@ -204,13 +234,23 @@ export default class DefenseScene extends Phaser.Scene {
     // Mark both cells as occupied by the tower
     cell.tower = towerObj;
     cellBelow.tower = towerObj;
+    
+    // Emit building completed event for UI highlighting
+    EventBus.emit("building-completed", window.__tdTowerType || BUILDING_TYPES.TOWER);
+    
+    // Clear the defense building selection state
+    window.__tdPlaceTower = false;
+    window.__tdTowerType = null;
   }
 
   launchAttack() {
     const v = DefenseModel.viewport;
     const startX = v.w - 10;
     const startY = Math.floor(v.h * (0.3 + Math.random() * 0.4));
-    const enemy = this.add.circle(startX, startY, Math.max(4, Math.floor(TILE_SIZE / 3)), 0xa33a3a);
+    const enemy = this.add.sprite(startX, startY, "attacker_walk");
+    enemy.play("attacker_walk_anim");
+    enemy.setDisplaySize(30, 44); // Use original spritesheet dimensions
+    enemy.setOrigin(0.5, 0.5);
     enemy.setDepth(4);
     const speed = Math.max(40, Math.floor(v.w * (0.10 + Math.random() * 0.05)));
     const hp = 100;

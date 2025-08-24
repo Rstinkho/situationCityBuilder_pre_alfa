@@ -1,39 +1,49 @@
 import GameModel from "../game/core/GameModel";
-import { BUILDING_TYPES, BUILDING_SIZES, TILE_SIZE, FARM_PER_100_EFF_MS } from "../game/core/constants";
+import {
+  BUILDING_TYPES,
+  BUILDING_SIZES,
+  TILE_SIZE,
+  FARM_PER_100_EFF_MS,
+} from "../game/core/constants";
 import { store as warehouseStore, isWarehouseFull } from "./warehouse";
 import EventBus from "../game/events/eventBus";
 import TimeSystem from "../game/core/TimeSystem";
 
 export function init(scene, grid, x, y) {
-	const { w, h } = BUILDING_SIZES[BUILDING_TYPES.FARM];
-	const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
-	const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
-	const rect = scene.add.image(cx, cy, "farm_frame_1");
-	rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
-	rect.setOrigin(0.5, 0.5);
-	rect.setInteractive({ useHandCursor: true });
+  const { w, h } = BUILDING_SIZES[BUILDING_TYPES.FARM];
+  const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
+  const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
+  const rect = scene.add.sprite(cx, cy, "farm_idle").play("farm_idle_anim");
 
-	const frames = ["farm_frame_1", "farm_frame_2", "farm_frame_3"];
-	let fi = 0;
-	scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
+  // --- COVER LOGIC (replaces setDisplaySize) ---
+  const targetW = w * TILE_SIZE - 2;
+  const targetH = h * TILE_SIZE - 2;
+  const texW = rect.width; // frame width from spritesheet
+  const texH = rect.height; // frame height from spritesheet
+  const scale = Math.max(targetW / texW, targetH / texH); // "cover" like CSS
+  rect.setScale(scale);
+  // --------------------------------------------
 
-	const root = grid[y][x];
-	root.building = rect;
-	root.buildingType = BUILDING_TYPES.FARM;
-	root.root = root;
-	root.isUnderConstruction = false;
-	root.width = w;
-	root.height = h;
-	root.data = {
-		workers: [], // { type: 'villager' | 'farmer', home: {x,y} }
-		fields: [], // array of root cells for fields
-		productionTimer: null,
-		gatheredTotal: 0,
-		availableToDeliver: 0,
-		assignedWarehouse: null,
-		deliveryDots: [], // array of moving resource dots
-		incomingDelivery: 0, // count of resources in transit
-	};
+  rect.setOrigin(0.5, 0.5);
+  rect.setInteractive({ useHandCursor: true });
+
+  const root = grid[y][x];
+  root.building = rect;
+  root.buildingType = BUILDING_TYPES.FARM;
+  root.root = root;
+  root.isUnderConstruction = false;
+  root.width = w;
+  root.height = h;
+  root.data = {
+    workers: [], // { type: 'villager' | 'farmer', home: {x,y} }
+    fields: [], // array of root cells for fields
+    productionTimer: null,
+    gatheredTotal: 0,
+    availableToDeliver: 0,
+    assignedWarehouse: null,
+    deliveryDots: [], // array of moving resource dots
+    incomingDelivery: 0, // count of resources in transit
+  };
 
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
@@ -54,17 +64,17 @@ export function init(scene, grid, x, y) {
 }
 
 export function getClickPayload(cell) {
-	return {
-		type: "farm",
-		workers: cell.data?.workers || [],
-		fields: cell.data?.fields || [],
-		efficiency: computeEfficiency(cell),
-		gatheredTotal: cell.data?.gatheredTotal || 0,
-		availableToDeliver: cell.data?.availableToDeliver || 0,
-		assignedWarehouse: cell.data?.assignedWarehouse || null,
-		rootX: cell.x,
-		rootY: cell.y,
-	};
+  return {
+    type: "farm",
+    workers: cell.data?.workers || [],
+    fields: cell.data?.fields || [],
+    efficiency: computeEfficiency(cell),
+    gatheredTotal: cell.data?.gatheredTotal || 0,
+    availableToDeliver: cell.data?.availableToDeliver || 0,
+    assignedWarehouse: cell.data?.assignedWarehouse || null,
+    rootX: cell.x,
+    rootY: cell.y,
+  };
 }
 
 export function assignWorker(scene, x, y, workerType) {
@@ -154,13 +164,16 @@ export function createFields(scene, x, y) {
 
 export function remove(scene, cell) {
   const root = cell.root || cell;
-  
+
   // Remove stored resources from global resources when building is destroyed
   const availableToDeliver = root.data?.availableToDeliver || 0;
   if (availableToDeliver > 0 && GameModel.resources) {
-    GameModel.resources.wheat = Math.max(0, (GameModel.resources.wheat || 0) - availableToDeliver);
+    GameModel.resources.wheat = Math.max(
+      0,
+      (GameModel.resources.wheat || 0) - availableToDeliver
+    );
   }
-  
+
   const workers = root.data?.workers || [];
   while (workers.length) {
     const w = workers.pop();
@@ -231,107 +244,118 @@ function updateProductionTimer(scene, root) {
 
   if (root.data.productionTimer) return; // already producing
 
-	const t = TimeSystem.every(scene, FARM_PER_100_EFF_MS, () => {
-		const eff = computeEfficiency(root) / 100;
-		if (eff <= 0) return;
-		
-		// Check resource limit (20)
-		if (root.data.availableToDeliver >= 20) {
-			// Production stops when limit reached
-			return;
-		}
-		
-		GameModel.resources.wheat += eff;
-		root.data.gatheredTotal += eff;
-		root.data.availableToDeliver += eff;
-		// try deliver automatically when possible
-		deliverIfReady(scene, root.x, root.y);
-	});
-	root.data.productionTimer = t;
+  const t = TimeSystem.every(scene, FARM_PER_100_EFF_MS, () => {
+    const eff = computeEfficiency(root) / 100;
+    if (eff <= 0) return;
+
+    // Check resource limit (20)
+    if (root.data.availableToDeliver >= 20) {
+      // Production stops when limit reached
+      return;
+    }
+
+    GameModel.resources.wheat += eff;
+    root.data.gatheredTotal += eff;
+    root.data.availableToDeliver += eff;
+    // try deliver automatically when possible
+    deliverIfReady(scene, root.x, root.y);
+  });
+  root.data.productionTimer = t;
 }
 
 export function assignWarehouse(scene, x, y, wx, wy) {
-	const grid = GameModel.gridData;
-	const root = grid[y][x];
-	if (!root || root.buildingType !== BUILDING_TYPES.FARM) return false;
-	const w = grid[wy]?.[wx];
-	if (!w || w.buildingType !== BUILDING_TYPES.WAREHOUSE || w.root !== w) return false;
-	
-	// Clear previous warehouse assignment
-	root.data.assignedWarehouse = null;
-	
-	// Set new warehouse assignment
-	root.data.assignedWarehouse = { x: wx, y: wy };
-	
-	// Try to resume delivery if we have resources to deliver
-	if (root.data.availableToDeliver >= 4) {
-		deliverIfReady(scene, x, y);
-	}
-	
-	return true;
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.FARM) return false;
+  const w = grid[wy]?.[wx];
+  if (!w || w.buildingType !== BUILDING_TYPES.WAREHOUSE || w.root !== w)
+    return false;
+
+  // Clear previous warehouse assignment
+  root.data.assignedWarehouse = null;
+
+  // Set new warehouse assignment
+  root.data.assignedWarehouse = { x: wx, y: wy };
+
+  // Try to resume delivery if we have resources to deliver
+  if (root.data.availableToDeliver >= 4) {
+    deliverIfReady(scene, x, y);
+  }
+
+  return true;
 }
 
 export function deliverIfReady(scene, x, y) {
-	const grid = GameModel.gridData;
-	const root = grid[y][x];
-	if (!root || root.buildingType !== BUILDING_TYPES.FARM) return false;
-	const wh = root.data.assignedWarehouse ? grid[root.data.assignedWarehouse.y]?.[root.data.assignedWarehouse.x] : null;
-	if (!wh || wh.buildingType !== BUILDING_TYPES.WAREHOUSE || wh.root !== wh) return false;
-	
-	// Check if warehouse is full
-	if (isWarehouseFull(wh)) return false;
-	
-	const amount = Math.floor(root.data.availableToDeliver);
-	if (amount < 4) return false;
-	
-	// Start visual delivery
-	spawnResourceDelivery(scene, root, wh, amount);
-	
-	return true;
+  const grid = GameModel.gridData;
+  const root = grid[y][x];
+  if (!root || root.buildingType !== BUILDING_TYPES.FARM) return false;
+  const wh = root.data.assignedWarehouse
+    ? grid[root.data.assignedWarehouse.y]?.[root.data.assignedWarehouse.x]
+    : null;
+  if (!wh || wh.buildingType !== BUILDING_TYPES.WAREHOUSE || wh.root !== wh)
+    return false;
+
+  // Check if warehouse is full
+  if (isWarehouseFull(wh)) return false;
+
+  const amount = Math.floor(root.data.availableToDeliver);
+  if (amount < 4) return false;
+
+  // Start visual delivery
+  spawnResourceDelivery(scene, root, wh, amount);
+
+  return true;
 }
 
 export function spawnResourceDelivery(scene, root, warehouse, amount) {
-	// Reserve resources for in-flight delivery
-	const deliveryAmount = Math.min(amount, 4); // Deliver up to 4 at a time
-	root.data.incomingDelivery = (root.data.incomingDelivery || 0) + deliveryAmount;
-	
-	// Create resource icon (wheat bundle)
-	const startX = root.x * TILE_SIZE + (root.width * TILE_SIZE) / 2;
-	const startY = root.y * TILE_SIZE + (root.height * TILE_SIZE) / 2;
-	
-	// Create a simple wheat icon (golden yellow circle)
-	const mover = scene.add.graphics();
-	mover.fillStyle(0xFFD700, 1); // Golden yellow color for wheat
-	mover.fillCircle(0, 0, 4);
-	mover.setPosition(startX, startY);
-	mover.setDepth(600);
-	
-	if (!root.data.deliveryDots) root.data.deliveryDots = [];
-	root.data.deliveryDots.push(mover);
+  // Reserve resources for in-flight delivery
+  const deliveryAmount = Math.min(amount, 4); // Deliver up to 4 at a time
+  root.data.incomingDelivery =
+    (root.data.incomingDelivery || 0) + deliveryAmount;
 
-	const targetX = warehouse.x * TILE_SIZE + (warehouse.width * TILE_SIZE) / 2;
-	const targetY = warehouse.y * TILE_SIZE + (warehouse.height * TILE_SIZE) / 2;
-	
-	scene.tweens.add({
-		targets: mover,
-		x: targetX,
-		y: targetY,
-		duration: 4500, // Slower movement as requested
-		ease: "Sine.easeInOut",
-		onComplete: () => {
-			// finalize delivery
-			const stored = warehouseStore(warehouse, "wheat", deliveryAmount);
-			if (stored > 0) {
-				root.data.availableToDeliver = Math.max(0, root.data.availableToDeliver - stored);
-			}
-			
-			// cleanup moving resource icon
-			mover.destroy();
-			const idx = root.data.deliveryDots.indexOf(mover);
-			if (idx >= 0) root.data.deliveryDots.splice(idx, 1);
-			root.data.incomingDelivery = Math.max(0, (root.data.incomingDelivery || 0) - deliveryAmount);
-		},
-	});
+  // Create resource icon (wheat bundle)
+  const startX = root.x * TILE_SIZE + (root.width * TILE_SIZE) / 2;
+  const startY = root.y * TILE_SIZE + (root.height * TILE_SIZE) / 2;
+
+  // Create a simple wheat icon (golden yellow circle)
+  const mover = scene.add.graphics();
+  mover.fillStyle(0xffd700, 1); // Golden yellow color for wheat
+  mover.fillCircle(0, 0, 4);
+  mover.setPosition(startX, startY);
+  mover.setDepth(600);
+
+  if (!root.data.deliveryDots) root.data.deliveryDots = [];
+  root.data.deliveryDots.push(mover);
+
+  const targetX = warehouse.x * TILE_SIZE + (warehouse.width * TILE_SIZE) / 2;
+  const targetY = warehouse.y * TILE_SIZE + (warehouse.height * TILE_SIZE) / 2;
+
+  scene.tweens.add({
+    targets: mover,
+    x: targetX,
+    y: targetY,
+    duration: 4500, // Slower movement as requested
+    ease: "Sine.easeInOut",
+    onComplete: () => {
+      // finalize delivery
+      const stored = warehouseStore(warehouse, "wheat", deliveryAmount);
+      if (stored > 0) {
+        root.data.availableToDeliver = Math.max(
+          0,
+          root.data.availableToDeliver - stored
+        );
+      }
+
+      // cleanup moving resource icon
+      mover.destroy();
+      const idx = root.data.deliveryDots.indexOf(mover);
+      if (idx >= 0) root.data.deliveryDots.splice(idx, 1);
+      root.data.incomingDelivery = Math.max(
+        0,
+        (root.data.incomingDelivery || 0) - deliveryAmount
+      );
+    },
+  });
 }
 
 function findHouseWithVillagerAvailable() {

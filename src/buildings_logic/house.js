@@ -40,7 +40,6 @@ export function init(scene, grid, x, y) {
   root.assigned = { villager: 0, farmer: 0, forester: 0, miner: 0, fisherman: 0 };
   root.employed = { villager: 0, farmer: 0, forester: 0, miner: 0, fisherman: 0 };
   root.incoming = 0;
-  root.occupantDots = [];
   root.arrivalDots = [];
 
   for (let dy = 0; dy < h; dy++) {
@@ -96,26 +95,20 @@ export function getClickPayload(cell) {
   };
 }
 
-export function addOccupantDot(scene, cell) {
-  const root = cell.root || cell;
-  if (!root.occupantDots) root.occupantDots = [];
-  const idx = Math.max(0, Math.min(HOUSE_CAPACITY - 1, root.occupants - 1));
-  const col = idx % 2;
-  const row = Math.floor(idx / 2);
-  const cx = root.x * TILE_SIZE + TILE_SIZE * (0.5 + col);
-  const cy = root.y * TILE_SIZE + TILE_SIZE * (0.5 + row);
-  const r = Math.max(3, Math.floor(TILE_SIZE / 6));
-  const dot = scene.add.circle(cx, cy, r, 0x2ecc71, 1);
-  root.occupantDots.push(dot);
-}
+
 
 export function spawnArrival(scene, root) {
   // Reserve capacity for in-flight arrival
   root.incoming = (root.incoming || 0) + 1;
   const startX = 1 * TILE_SIZE + TILE_SIZE / 2;
   const startY = 1 * TILE_SIZE + TILE_SIZE / 2;
-  const r = Math.max(3, Math.floor(TILE_SIZE / 6));
-  const mover = scene.add.circle(startX, startY, r, 0x2ecc71, 1);
+  
+  // Create villager sprite instead of green circle
+  const mover = scene.add.sprite(startX, startY, "villager_walk");
+  mover.play("villager_walk_anim");
+  mover.setDisplaySize(30, 44); // Set size to match the spritesheet dimensions
+  mover.setOrigin(0.5, 0.5);
+  
   if (!root.arrivalDots) root.arrivalDots = [];
   root.arrivalDots.push(mover);
 
@@ -125,15 +118,15 @@ export function spawnArrival(scene, root) {
     targets: mover,
     x: targetX,
     y: targetY,
-    duration: 2200,
+    duration: 4400, // Doubled duration to slow down arrival
     ease: "Sine.easeInOut",
     onComplete: () => {
       // finalize arrival
       root.villagers += 1;
       root.occupants += 1;
       GameModel.population.current += 1;
-      addOccupantDot(scene, root);
-      // cleanup moving dot
+      // Remove the visual representation on the house - no need to call addOccupantDot
+      // cleanup moving villager sprite
       mover.destroy();
       const idx = root.arrivalDots.indexOf(mover);
       if (idx >= 0) root.arrivalDots.splice(idx, 1);
@@ -220,10 +213,6 @@ export function remove(scene, cell) {
   }
 
   root.building?.destroy();
-  if (root.occupantDots) {
-    root.occupantDots.forEach((d) => d.destroy());
-    root.occupantDots.length = 0;
-  }
   if (root.arrivalDots) {
     root.arrivalDots.forEach((d) => d.destroy());
     root.arrivalDots.length = 0;

@@ -23,15 +23,17 @@ const Grid = {
 
     // Random tile patches removed for admin-driven assignment
 
-    // Grid lines
-    const graphics = scene.add.graphics();
-    graphics.lineStyle(1, 0x3a3f45, 1);
+    // Grid lines (now hideable)
+    const gridLines = scene.add.graphics();
+    gridLines.lineStyle(1, 0x3a3f45, 1);
     for (let y = 0; y <= GRID_HEIGHT; y++) {
-      graphics.strokeLineShape({ x1: 0, y1: y * TILE_SIZE, x2: GRID_WIDTH * TILE_SIZE, y2: y * TILE_SIZE });
+      gridLines.strokeLineShape({ x1: 0, y1: y * TILE_SIZE, x2: GRID_WIDTH * TILE_SIZE, y2: y * TILE_SIZE });
     }
     for (let x = 0; x <= GRID_WIDTH; x++) {
-      graphics.strokeLineShape({ x1: x * TILE_SIZE, y1: 0, x2: x * TILE_SIZE, y2: GRID_HEIGHT * TILE_SIZE });
+      gridLines.strokeLineShape({ x1: x * TILE_SIZE, y1: 0, x2: x * TILE_SIZE, y2: GRID_HEIGHT * TILE_SIZE });
     }
+    gridLines.setVisible(false); // Hide grid lines by default
+    scene.__gridLines__ = gridLines;
 
     // Tile overlay
     createTileTypeOverlay(scene, grid);
@@ -47,6 +49,12 @@ const Grid = {
   },
 
   setTileOverlayVisible(scene, visible) {
+    scene.__tileTypeOverlay__?.setVisible(visible);
+  },
+
+  setGridVisible(scene, visible) {
+    // Control both grid lines and tile overlay
+    scene.__gridLines__?.setVisible(visible);
     scene.__tileTypeOverlay__?.setVisible(visible);
   },
 

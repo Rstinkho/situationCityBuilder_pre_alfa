@@ -6,14 +6,14 @@ export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.WAREHOUSE];
   const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
   const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
-  const rect = scene.add.image(cx, cy, "warehouse_frame_1");
+    const rect = scene.add
+    .sprite(cx, cy, "warehouse_idle")
+    .play("warehouse_idle_anim");
   rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
   rect.setOrigin(0.5, 0.5);
   rect.setInteractive({ useHandCursor: true });
 
-  const frames = ["warehouse_frame_1", "warehouse_frame_2", "warehouse_frame_3"];
-  let fi = 0;
-  scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
+
 
   const root = grid[y][x];
   root.building = rect;

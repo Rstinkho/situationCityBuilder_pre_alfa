@@ -1,7 +1,7 @@
 import React from "react";
 import * as Farm from "../../buildings_logic/farm";
 import GameModel from "../../game/core/GameModel";
-import { panelStyle, btnStyle } from "./styles";
+import { panelStyle, btnMinimal, btnMinimalSecondary, btnMinimalSmall, btnMinimalIcon, btnMinimalDisabled } from "./styles";
 import { BUILDING_TYPES } from "../../game/core/constants";
 
 export default function FarmPanel({ data, onClose, destroyButton }) {
@@ -27,79 +27,184 @@ export default function FarmPanel({ data, onClose, destroyButton }) {
 
   return (
     <div style={panelStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <strong>Farm</strong>
-        <div style={{ display: "flex", gap: 8 }}>
+      {/* Compact Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 18 }}>🌾</span>
+          <strong style={{ fontSize: 14 }}>Farm</strong>
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
           {destroyButton}
-          <button onClick={onClose}>✕</button>
+          <button 
+            onClick={onClose}
+            style={{
+              ...btnMinimalSecondary,
+              width: "auto",
+              padding: "4px 6px",
+              margin: 0,
+              fontSize: 10,
+            }}
+          >
+            ✕
+          </button>
         </div>
       </div>
-      <div style={{ marginTop: 8 }}>
-        <button
-          style={{
-            ...btnStyle,
-            background: hasWarehouse ? (whFull ? "#7a1f1f" : "#2e7d32") : "#3a3a3a",
-            border: hasWarehouse ? (whFull ? "1px solid #a33" : "1px solid #3fa143") : "1px solid #555",
-          }}
-          disabled={!hasWarehouse}
-          onClick={startAssignWarehouse}
-          title={hasWarehouse ? (whFull ? "Assigned warehouse is full" : "Pick a warehouse on map") : "Place a warehouse to enable"}
-        >
-          Deliver to warehouse
-        </button>
+
+      {/* Compact Stats Grid */}
+      <div style={{ 
+        display: "grid", 
+        gridTemplateColumns: "repeat(4, 1fr)", 
+        gap: 4, 
+        marginBottom: 8,
+        padding: "8px",
+        background: "#1a1a1a",
+        borderRadius: 6,
+        border: "1px solid #333"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 1 }}>👥</div>
+          <div style={{ fontSize: 11, fontWeight: "bold" }}>
+            {workers.map((w) => w.type).join(", ") || "-"}
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 1 }}>⚡</div>
+          <div style={{ fontSize: 11, fontWeight: "bold", color: "#4caf50" }}>
+            {data.efficiency}%
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 1 }}>📦</div>
+          <div style={{ fontSize: 11, fontWeight: "bold" }}>
+            {Number(data.gatheredTotal || 0).toFixed(1)}
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 1 }}>🚚</div>
+          <div style={{ fontSize: 11, fontWeight: "bold", color: "#ff9800" }}>
+            {Number(data.availableToDeliver || 0).toFixed(1)}
+          </div>
+        </div>
       </div>
-      <div>Workers: {workers.map((w) => w.type).join(", ") || "-"}</div>
-      <div>Efficiency: {data.efficiency}%</div>
-      <div>Gathered: {Number(data.gatheredTotal || 0).toFixed(1)}</div>
-      <div>Available: {Number(data.availableToDeliver || 0).toFixed(1)}</div>
-      <div>Assigned warehouse: {data.assignedWarehouse ? `${data.assignedWarehouse.x},${data.assignedWarehouse.y} yes` : '-'}</div>
+
+      {/* Combined Warehouse & Fields Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+        {/* Warehouse Assignment */}
+        <div>
+          <button
+            style={{
+              ...btnMinimal,
+              background: hasWarehouse ? (whFull ? "#7a1f1f" : "#2e7d32") : "#3a3a3a",
+              border: hasWarehouse ? (whFull ? "1px solid #a33" : "1px solid #3fa143") : "1px solid #555",
+              fontSize: 10,
+              padding: "6px 8px",
+            }}
+            disabled={!hasWarehouse}
+            onClick={startAssignWarehouse}
+            title={hasWarehouse ? (whFull ? "Assigned warehouse is full" : "Pick a warehouse on map") : "Place a warehouse to enable"}
+          >
+            <span style={{ marginRight: 4 }}>🏗️</span>
+            Warehouse
+          </button>
+          
+          {data.assignedWarehouse && (
+            <div style={{ 
+              fontSize: 9, 
+              opacity: 0.8, 
+              marginTop: 2,
+              textAlign: "center"
+            }}>
+              ({data.assignedWarehouse.x}, {data.assignedWarehouse.y})
+            </div>
+          )}
+        </div>
+
+        {/* Fields Section */}
+        <div>
+          <button
+            style={{
+              ...btnMinimal,
+              background: canCreateFields ? "#2e7d32" : "#3a3a3a",
+              border: canCreateFields ? "1px solid #3fa143" : "1px solid #555",
+              fontSize: 10,
+              padding: "6px 8px",
+            }}
+            disabled={!canCreateFields}
+            onClick={createFields}
+            title={canCreateFields ? "Create two field tiles in front of the farm" : "Requires at least 1 worker and two empty tiles directly in front"}
+          >
+            <span style={{ marginRight: 4 }}>🌱</span>
+            Fields {data.fields?.length || 0}/2
+          </button>
+        </div>
+      </div>
+
+      {/* Warning for limit reached */}
       {data.availableToDeliver >= 20 && (
         <div style={{ 
           color: "#ff9800", 
           fontWeight: "bold", 
-          marginTop: 8,
-          padding: "8px",
+          marginBottom: 8,
+          padding: "6px 8px",
           background: "#1a1a1a",
-          borderRadius: "4px",
-          border: "1px solid #ff9800"
+          borderRadius: 4,
+          border: "1px solid #ff9800",
+          fontSize: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 4
         }}>
-          ⚠️ Limit reached! Build more warehouses!
+          ⚠️ Limit reached!
         </div>
       )}
-      <div>Fields: {data.fields?.length || 0}/2</div>
-      <div style={{ marginTop: 8 }}>
-        <button style={btnStyle} disabled={!canAssignVillager} onClick={() => assign("villager")}>
-          Assign villager (+15%)
-        </button>
-        <button style={btnStyle} disabled={!canAssignFarmer} onClick={() => assign("farmer")}>
-          Assign farmer (+50%)
-        </button>
-        <button style={btnStyle} disabled={!canUnassign} onClick={unassign}>
-          Unassign last
-        </button>
-      </div>
-      <div style={{ marginTop: 8 }}>
-        <button
-          style={{
-            ...btnStyle,
-            background: canCreateFields ? "#2e7d32" : "#3a3a3a",
-            border: canCreateFields ? "1px solid #3fa143" : "1px solid #555",
-          }}
-          disabled={!canCreateFields}
-          onClick={createFields}
-          title={canCreateFields ? "Create two field tiles in front of the farm" : "Requires at least 1 worker and two empty tiles directly in front"}
-        >
-          Create fields (2 tiles in front)
-        </button>
-      </div>
-      {!canCreateFields && (
-        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-          Tip: assign a worker and ensure two empty tiles are available in front of the farm.
+
+      {/* Compact Worker Management */}
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 10, fontWeight: "bold", marginBottom: 4, opacity: 0.8 }}>
+          👥 Workers
         </div>
-      )}
-      <p style={{ marginTop: 8, opacity: 0.8 }}>
-        Production starts when at least 2 fields are built and workers are assigned. 100% efficiency yields +1 wheat/20s.
-      </p>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+          <button 
+            style={{
+              ...(canAssignVillager ? btnMinimalSmall : btnMinimalDisabled),
+              fontSize: 9,
+              padding: "4px 6px",
+            }}
+            disabled={!canAssignVillager} 
+            onClick={() => assign("villager")}
+          >
+            <span style={{ marginRight: 2 }}>👤</span>
+            +15%
+          </button>
+          
+          <button 
+            style={{
+              ...(canAssignFarmer ? btnMinimalSmall : btnMinimalDisabled),
+              fontSize: 9,
+              padding: "4px 6px",
+            }}
+            disabled={!canAssignFarmer} 
+            onClick={() => assign("farmer")}
+          >
+            <span style={{ marginRight: 2 }}>👨‍🌾</span>
+            +50%
+          </button>
+
+          <button 
+            style={{
+              ...(canUnassign ? btnMinimalSecondary : btnMinimalDisabled),
+              fontSize: 9,
+              padding: "4px 6px",
+            }}
+            disabled={!canUnassign} 
+            onClick={unassign}
+          >
+            <span style={{ marginRight: 2 }}>❌</span>
+            Remove
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

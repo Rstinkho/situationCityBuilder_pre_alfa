@@ -9,11 +9,11 @@ export const QUEST_EVENTS = {
     description: "A mysterious figure has taken interest in your growing settlement. They demand tribute to ensure your safety.",
     choices: [
       {
-        text: "Agree to pay 5 gold",
+        text: "Agree to pay 25 gold",
         action: (questModel) => {
           // Check if player has enough gold
-          if (GameModel.gold >= 5) {
-            GameModel.gold -= 5;
+          if (GameModel.gold >= 1) {
+            GameModel.gold -= 25;
             
             // Start the tribute cycle every 90 seconds
             questModel.startQuestTimer("tribute_cycle", () => {

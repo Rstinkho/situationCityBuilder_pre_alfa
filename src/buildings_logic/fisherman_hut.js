@@ -15,23 +15,19 @@ export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.FISHERMAN_HUT];
   const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
   const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
-  const rect = scene.add.image(cx, cy, "fisher_frame_1");
-  rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
+  const rect = scene.add.sprite(cx, cy, "fisher_idle").play("fisher_idle_anim");
+
+  // --- COVER LOGIC (replaces setDisplaySize) ---
+  const targetW = w * TILE_SIZE - 2;
+  const targetH = h * TILE_SIZE - 2;
+  const texW = rect.width; // frame width from spritesheet
+  const texH = rect.height; // frame height from spritesheet
+  const scale = Math.max(targetW / texW, targetH / texH); // "cover" like CSS
+  rect.setScale(scale);
+  // --------------------------------------------
+
   rect.setOrigin(0.5, 0.5);
   rect.setInteractive({ useHandCursor: true });
-
-  const frames = ["fisher_frame_1", "fisher_frame_2", "fisher_frame_3"];
-  let fi = 0;
-  scene.time.addEvent({
-    delay: 500,
-    loop: true,
-    callback: () => {
-      fi = (fi + 1) % frames.length;
-      try {
-        rect.setTexture(frames[fi]);
-      } catch {}
-    },
-  });
 
   const root = grid[y][x];
   root.building = rect;
@@ -190,13 +186,16 @@ export function clearTargetTile(scene, x, y) {
 
 export function remove(scene, cell) {
   const root = cell.root || cell;
-  
+
   // Remove stored resources from global resources when building is destroyed
   const availableToDeliver = root.data?.availableToDeliver || 0;
   if (availableToDeliver > 0 && GameModel.resources) {
-    GameModel.resources.fish = Math.max(0, (GameModel.resources.fish || 0) - availableToDeliver);
+    GameModel.resources.fish = Math.max(
+      0,
+      (GameModel.resources.fish || 0) - availableToDeliver
+    );
   }
-  
+
   const workers = root.data?.workers || [];
   while (workers.length) {
     const w = workers.pop();
@@ -271,13 +270,13 @@ function updateProductionTimer(scene, root) {
   const t = TimeSystem.every(scene, FISH_PER_100_EFF_MS, () => {
     const eff = computeEfficiency(root) / 100;
     if (eff <= 0) return;
-    
+
     // Check resource limit (20)
     if (root.data.availableToDeliver >= 20) {
       // Production stops when limit reached
       return;
     }
-    
+
     GameModel.resources.fish += eff;
     root.data.gatheredTotal += eff;
     root.data.availableToDeliver += eff;
@@ -294,18 +293,18 @@ export function assignWarehouse(scene, x, y, wx, wy) {
   const w = grid[wy]?.[wx];
   if (!w || w.buildingType !== BUILDING_TYPES.WAREHOUSE || w.root !== w)
     return false;
-  
+
   // Clear previous warehouse assignment
   root.data.assignedWarehouse = null;
-  
+
   // Set new warehouse assignment
   root.data.assignedWarehouse = { x: wx, y: wy };
-  
+
   // Try to resume delivery if we have resources to deliver
   if (root.data.availableToDeliver >= 4) {
     deliverIfReady(scene, x, y);
   }
-  
+
   return true;
 }
 
@@ -318,41 +317,42 @@ export function deliverIfReady(scene, x, y) {
     : null;
   if (!wh || wh.buildingType !== BUILDING_TYPES.WAREHOUSE || wh.root !== wh)
     return false;
-  
+
   // Check if warehouse is full
   if (isWarehouseFull(wh)) return false;
-  
+
   const amount = Math.floor(root.data.availableToDeliver);
   if (amount < 4) return false;
-  
+
   // Start visual delivery
   spawnResourceDelivery(scene, root, wh, amount);
-  
+
   return true;
 }
 
 export function spawnResourceDelivery(scene, root, warehouse, amount) {
   // Reserve resources for in-flight delivery
   const deliveryAmount = Math.min(amount, 4); // Deliver up to 4 at a time
-  root.data.incomingDelivery = (root.data.incomingDelivery || 0) + deliveryAmount;
-  
+  root.data.incomingDelivery =
+    (root.data.incomingDelivery || 0) + deliveryAmount;
+
   // Create resource icon (fish)
   const startX = root.x * TILE_SIZE + (root.width * TILE_SIZE) / 2;
   const startY = root.y * TILE_SIZE + (root.height * TILE_SIZE) / 2;
-  
+
   // Create a simple fish icon (blue oval)
   const mover = scene.add.graphics();
-  mover.fillStyle(0x4169E1, 1); // Blue color for fish
+  mover.fillStyle(0x4169e1, 1); // Blue color for fish
   mover.fillEllipse(0, 0, 6, 3);
   mover.setPosition(startX, startY);
   mover.setDepth(600);
-  
+
   if (!root.data.deliveryDots) root.data.deliveryDots = [];
   root.data.deliveryDots.push(mover);
 
   const targetX = warehouse.x * TILE_SIZE + (warehouse.width * TILE_SIZE) / 2;
   const targetY = warehouse.y * TILE_SIZE + (warehouse.height * TILE_SIZE) / 2;
-  
+
   scene.tweens.add({
     targets: mover,
     x: targetX,
@@ -363,14 +363,20 @@ export function spawnResourceDelivery(scene, root, warehouse, amount) {
       // finalize delivery
       const stored = warehouseStore(warehouse, "fish", deliveryAmount);
       if (stored > 0) {
-        root.data.availableToDeliver = Math.max(0, root.data.availableToDeliver - stored);
+        root.data.availableToDeliver = Math.max(
+          0,
+          root.data.availableToDeliver - stored
+        );
       }
-      
+
       // cleanup moving resource icon
       mover.destroy();
       const idx = root.data.deliveryDots.indexOf(mover);
       if (idx >= 0) root.data.deliveryDots.splice(idx, 1);
-      root.data.incomingDelivery = Math.max(0, (root.data.incomingDelivery || 0) - deliveryAmount);
+      root.data.incomingDelivery = Math.max(
+        0,
+        (root.data.incomingDelivery || 0) - deliveryAmount
+      );
     },
   });
 }

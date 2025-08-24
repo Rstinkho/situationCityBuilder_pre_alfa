@@ -1,7 +1,7 @@
 import GameModel from "./GameModel";
 import { HOUSE_CAPACITY, VILLAGER_ARRIVAL_EVERY_MS } from "./constants";
 import TimeSystem from "./TimeSystem";
-import { addOccupantDot, spawnArrival } from "../../buildings_logic/house";
+import { spawnArrival } from "../../buildings_logic/house";
 
 const PopulationSystem = {
   start(scene) {

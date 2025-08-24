@@ -35,8 +35,13 @@ import { fetchLatestTilesFromSupabase } from "../utils/supabase";
 //Import idle state of buildings
 import farmIdle from "../buildings_logic/farm_idle.png";
 import houseIdle from "../buildings_logic/house_idle.png";
-import lumberIdle from "../buildings_logic/1.png";
+import lumberIdle from "../buildings_logic/lumber_idle.png";
 import trainingIdle from "../buildings_logic/training_idle.png";
+import quarryIdle from "../buildings_logic/quarry_idle.png";
+import fisherIdle from "../buildings_logic/fisher_idle.png";
+import warehouseIdle from "../buildings_logic/warehouse_idle.png";
+
+import villagerSpritesheet from "../assets/characters/villager_spritesheet.png";
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -49,8 +54,8 @@ export default class MainScene extends Phaser.Scene {
   preload() {
     this.load.image("bg", "assets/bg.png");
     this.load.spritesheet("farm_idle", farmIdle, {
-      frameWidth: 63,
-      frameHeight: 63,
+      frameWidth: 120,
+      frameHeight: 88,
     });
     this.load.spritesheet("house_idle", houseIdle, {
       frameWidth: 63,
@@ -60,9 +65,25 @@ export default class MainScene extends Phaser.Scene {
       frameWidth: 120,
       frameHeight: 88,
     });
+    this.load.spritesheet("quarry_idle", quarryIdle, {
+      frameWidth: 120,
+      frameHeight: 88,
+    });
+    this.load.spritesheet("fisher_idle", fisherIdle, {
+      frameWidth: 120,
+      frameHeight: 88,
+    });
     this.load.spritesheet("training_idle", trainingIdle, {
-      frameWidth: 95,
-      frameHeight: 63,
+      frameWidth: 180,
+      frameHeight: 88,
+    });
+    this.load.spritesheet("warehouse_idle", warehouseIdle, {
+      frameWidth: 180,
+      frameHeight: 122,
+    });
+    this.load.spritesheet("villager_walk", villagerSpritesheet, {
+      frameWidth: 30,
+      frameHeight: 44,
     });
   }
   init() {
@@ -123,6 +144,50 @@ export default class MainScene extends Phaser.Scene {
           end: 2,
         }),
         frameRate: 2,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("quarry_idle_anim")) {
+      this.anims.create({
+        key: "quarry_idle_anim",
+        frames: this.anims.generateFrameNumbers("quarry_idle", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("fisher_idle_anim")) {
+      this.anims.create({
+        key: "fisher_idle_anim",
+        frames: this.anims.generateFrameNumbers("fisher_idle", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("warehouse_idle_anim")) {
+      this.anims.create({
+        key: "warehouse_idle_anim",
+        frames: this.anims.generateFrameNumbers("warehouse_idle", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists("villager_walk_anim")) {
+      this.anims.create({
+        key: "villager_walk_anim",
+        frames: this.anims.generateFrameNumbers("villager_walk", {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 6,
         repeat: -1,
       });
     }

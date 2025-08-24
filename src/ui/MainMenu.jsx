@@ -9,14 +9,19 @@ export default function MainMenu({ onStartGame }) {
     left: 0,
     right: 0,
     bottom: 0,
-    background: "linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)",
+    background: "url('/assets/menu_bg.png')",
+    backgroundSize: "100% 100%",
+    backgroundPosition: "center center",
+    backgroundRepeat: "no-repeat",
+    backgroundAttachment: "fixed",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2000,
     fontFamily: "sans-serif",
-    color: "#fff"
+    color: "#fff",
+    overflow: "hidden"
   };
 
   const titleStyle = {
@@ -236,50 +241,66 @@ export default function MainMenu({ onStartGame }) {
 
   return (
     <div style={menuStyle}>
-      <h1 style={titleStyle}>SITUATION 0.01</h1>
-      <p style={subtitleStyle}>Pre-Alpha Test Version</p>
+      {/* Semi-transparent overlay for better text readability */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0, 0, 0, 0.4)",
+        zIndex: 1
+      }} />
       
-      <div style={buttonContainerStyle}>
-        <button
-          onClick={onStartGame}
-          style={startButtonStyle}
-          onMouseEnter={(e) => {
-            e.target.style.transform = "translateY(-2px)";
-            e.target.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
-          }}
-        >
-          🚀 Start Game
-        </button>
+      {/* Content with higher z-index */}
+      <div style={{ zIndex: 2, position: "relative" }}>
+        <h1 style={titleStyle}>SITUATION 0.01</h1>
+        <p style={subtitleStyle}>Pre-Alpha Test Version</p>
         
-        <button
-          onClick={() => setShowInstructions(true)}
-          style={instructionsButtonStyle}
-          onMouseEnter={(e) => {
-            e.target.style.transform = "translateY(-2px)";
-            e.target.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
-          }}
-        >
-          📖 Instructions
-        </button>
-      </div>
-      
-      <div style={{ 
-        position: "absolute", 
-        bottom: "20px", 
-        fontSize: "14px", 
-        opacity: 0.6,
-        textAlign: "center"
-      }}>
-        <p>Pre-Alpha Test Build</p>
-        <p>Not all features are final</p>
+        <div style={buttonContainerStyle}>
+          <button
+            onClick={onStartGame}
+            style={startButtonStyle}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "translateY(-2px)";
+              e.target.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+            }}
+          >
+            🚀 Start Game
+          </button>
+          
+          <button
+            onClick={() => setShowInstructions(true)}
+            style={instructionsButtonStyle}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "translateY(-2px)";
+              e.target.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+            }}
+          >
+            📖 Instructions
+          </button>
+        </div>
+        
+        <div style={{ 
+          position: "relative", 
+          bottom: "-120px", 
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: "14px", 
+          opacity: 0.6,
+          textAlign: "center"
+        }}>
+          <p>Pre-Alpha Test Build</p>
+          <p>Not all features are final</p>
+        </div>
       </div>
     </div>
   );

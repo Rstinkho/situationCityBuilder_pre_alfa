@@ -8,14 +8,20 @@ export function init(scene, grid, x, y) {
   const { w, h } = BUILDING_SIZES[BUILDING_TYPES.QUARRY];
   const cx = x * TILE_SIZE + 1 + (w * TILE_SIZE - 2) / 2;
   const cy = y * TILE_SIZE + 1 + (h * TILE_SIZE - 2) / 2;
-  const rect = scene.add.image(cx, cy, "quarry_frame_1");
-  rect.setDisplaySize(w * TILE_SIZE - 2, h * TILE_SIZE - 2);
+
+  const rect = scene.add.sprite(cx, cy, "quarry_idle").play("quarry_idle_anim");
+
+  // --- COVER LOGIC (replaces setDisplaySize) ---
+  const targetW = w * TILE_SIZE - 2;
+  const targetH = h * TILE_SIZE - 2;
+  const texW = rect.width; // frame width from spritesheet
+  const texH = rect.height; // frame height from spritesheet
+  const scale = Math.max(targetW / texW, targetH / texH); // "cover" like CSS
+  rect.setScale(scale);
+  // --------------------------------------------
+
   rect.setOrigin(0.5, 0.5);
   rect.setInteractive({ useHandCursor: true });
-
-  const frames = ["quarry_frame_1", "quarry_frame_2", "quarry_frame_3"];
-  let fi = 0;
-  scene.time.addEvent({ delay: 500, loop: true, callback: () => { fi = (fi + 1) % frames.length; try { rect.setTexture(frames[fi]); } catch {} } });
 
   const root = grid[y][x];
   root.building = rect;

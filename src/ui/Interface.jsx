@@ -20,10 +20,42 @@ export default function Interface() {
   const [adminMode, setAdminMode] = useState(false);
   const [adminTileType, setAdminTileType] = useState(null);
   const [, setTick] = useState(0);
+  const [selectedBuilding, setSelectedBuilding] = useState(null);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 500);
     return () => clearInterval(id);
+  }, []);
+
+  // Listen for building selection changes
+  useEffect(() => {
+    const checkSelection = () => {
+      // Check for city building selection
+      if (window.__phaserScene && Pointer.selected) {
+        setSelectedBuilding(Pointer.selected);
+      }
+      // Check for defense building selection
+      else if (window.__tdPlaceTower && window.__tdTowerType) {
+        setSelectedBuilding(window.__tdTowerType);
+      }
+      // No building selected
+      else {
+        setSelectedBuilding(null);
+      }
+    };
+
+    // Check selection every 100ms
+    const intervalId = setInterval(checkSelection, 100);
+
+    // Also listen for building completion events
+    const unsubscribe = EventBus.on("building-completed", () => {
+      setSelectedBuilding(null);
+    });
+
+    return () => {
+      clearInterval(intervalId);
+      unsubscribe();
+    };
   }, []);
 
   return (
@@ -34,15 +66,17 @@ export default function Interface() {
         padding: "8px",
         fontFamily: "sans-serif",
         color: "#fff",
-        overflow: "hidden",
+        overflow: "auto",
         boxSizing: "border-box",
         display: "flex",
-        flexDirection: "column"
+        flexDirection: "column",
       }}
     >
       <TabBar tab={tab} setTab={setTab} />
-      <div style={{ flex: 1, overflow: "hidden" }}>
-        {tab === "construction" && <ConstructionPanel />}
+      <div style={{ flex: 1, overflowX: "hidden", overflowY: "auto" }}>
+        {tab === "construction" && (
+          <ConstructionPanel selectedBuilding={selectedBuilding} />
+        )}
         {tab === "people" && <PeoplePanel />}
         {tab === "resources" && <ResourcesPanel />}
         {tab === "admin" && (
@@ -50,7 +84,7 @@ export default function Interface() {
             adminMode={adminMode}
             setAdminMode={setAdminMode}
             adminTileType={adminTileType}
-            setAdminTileType={setAdminTileType}
+            setAdminTileType={adminTileType}
           />
         )}
       </div>
@@ -80,7 +114,7 @@ function TabBar({ tab, setTab }) {
             cursor: "pointer",
             minWidth: 80,
             fontWeight: 600,
-            fontSize: 11
+            fontSize: 11,
           }}
         >
           {t.label}
@@ -95,15 +129,15 @@ function PanelContainer({ children, title }) {
     <div
       style={{
         width: "100%",
-        maxWidth: "100%",
+        maxWidth: "97%",
         background: "rgba(20,20,20,0.92)",
-        border: "1px solid #444",
+        // border: "1px solid #444",
         borderRadius: 8,
         padding: 8,
         fontSize: 13,
         marginBottom: 8,
         maxHeight: "100%",
-        overflow: "hidden"
+        overflow: "hidden",
       }}
     >
       <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 14 }}>
@@ -116,31 +150,73 @@ function PanelContainer({ children, title }) {
   );
 }
 
-function ConstructionPanel() {
+function ConstructionPanel({ selectedBuilding }) {
   const [constructionTab, setConstructionTab] = useState("city");
-  
-  const cityBuildingItems = useMemo(() => [
-    { key: BUILDING_TYPES.HOUSE, label: "House", img: house_img, hasImage: true },
-    { key: BUILDING_TYPES.TRAINING_CENTER, label: "Training Center", img: training_img, hasImage: true },
-    { key: BUILDING_TYPES.FARM, label: "Farm", img: farm_img, hasImage: true },
-    { key: BUILDING_TYPES.LUMBERYARD, label: "Lumberyard", img: lumber_img, hasImage: true },
-    { key: BUILDING_TYPES.QUARRY, label: "Quarry", img: "⛏️", hasImage: false },
-    { key: BUILDING_TYPES.FISHERMAN_HUT, label: "Fisherman Hut", img: "🎣", hasImage: false },
-    { key: BUILDING_TYPES.WAREHOUSE, label: "Warehouse", img: "🏗️", hasImage: false },
-  ], []);
 
-  const defenseItems = useMemo(() => [
-    { key: BUILDING_TYPES.TOWER, label: "Tower", img: "🏹", isDefense: true },
-  ], []);
+  const cityBuildingItems = useMemo(
+    () => [
+      {
+        key: BUILDING_TYPES.HOUSE,
+        label: "House",
+        img: house_img,
+        hasImage: true,
+      },
+      {
+        key: BUILDING_TYPES.TRAINING_CENTER,
+        label: "Training Center",
+        img: training_img,
+        hasImage: true,
+      },
+      {
+        key: BUILDING_TYPES.FARM,
+        label: "Farm",
+        img: farm_img,
+        hasImage: true,
+      },
+      {
+        key: BUILDING_TYPES.LUMBERYARD,
+        label: "Lumberyard",
+        img: lumber_img,
+        hasImage: true,
+      },
+      {
+        key: BUILDING_TYPES.QUARRY,
+        label: "Quarry",
+        img: "⛏️",
+        hasImage: false,
+      },
+      {
+        key: BUILDING_TYPES.FISHERMAN_HUT,
+        label: "Fisherman Hut",
+        img: "🎣",
+        hasImage: false,
+      },
+      {
+        key: BUILDING_TYPES.WAREHOUSE,
+        label: "Warehouse",
+        img: "🏗️",
+        hasImage: false,
+      },
+    ],
+    []
+  );
+
+  const defenseItems = useMemo(
+    () => [
+      { key: BUILDING_TYPES.TOWER, label: "Tower", img: "🏹", isDefense: true },
+    ],
+    []
+  );
 
   const canAfford = (key) => {
-    if (key === BUILDING_TYPES.TOWER) return GameModel.gold >= (BUILDING_COSTS[key] || 0);
+    if (key === BUILDING_TYPES.TOWER)
+      return GameModel.gold >= (BUILDING_COSTS[key] || 0);
     return GameModel.gold >= (BUILDING_COSTS[key] || 0);
   };
 
   const onPick = (key, isDefense = false) => {
     if (!canAfford(key)) return;
-    
+
     if (isDefense) {
       // Handle defense building placement - communicate directly with DefenseScene
       window.__tdPlaceTower = true;
@@ -155,100 +231,128 @@ function ConstructionPanel() {
     }
   };
 
-  const BuildingItem = ({ item, isDefense = false }) => (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-        padding: 6,
-        background: "#1a1a1a",
-        borderRadius: 6,
-        border: "1px solid #333",
-        opacity: canAfford(item.key) ? 1 : 0.7,
-        textAlign: "center"
-      }}
-    >
+  const BuildingItem = ({ item, isDefense = false }) => {
+    const isSelected = selectedBuilding === item.key;
+    const [isHovered, setIsHovered] = useState(false);
+
+    const getBackgroundColor = () => {
+      if (isSelected) return "#2e7d32";
+      if (isHovered && canAfford(item.key)) return "#2a2a2a";
+      return "#1a1a1a";
+    };
+
+    const getBorderColor = () => {
+      if (isSelected) return "#4caf50";
+      if (isHovered && canAfford(item.key)) return "#555";
+      return "#333";
+    };
+
+    return (
       <div
         style={{
-          width: 40,
-          height: 40,
-          background: "#111",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 4,
-          border: "1px solid #333",
-        }}
-      >
-        {isDefense ? (
-          <div style={{ fontSize: 24 }}>{item.img}</div>
-        ) : item.hasImage ? (
-          <img
-            src={item.img}
-            width={32}
-            height={32}
-            style={{ imageRendering: "pixelated", objectFit: "cover" }}
-            onError={(e) => {
-              // Fallback to emoji if image fails to load
-              e.target.style.display = 'none';
-              const fallback = e.target.parentNode.querySelector('.fallback-emoji');
-              if (fallback) fallback.style.display = 'block';
-            }}
-          />
-        ) : (
-          <div style={{ fontSize: 24 }}>{item.img}</div>
-        )}
-        {/* Fallback emoji for failed images */}
-        {!isDefense && item.hasImage && (
-          <div 
-            className="fallback-emoji"
-            style={{
-              display: 'none',
-              fontSize: 24,
-              width: 32,
-              height: 32,
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {item.key === BUILDING_TYPES.HOUSE ? "🏠" : 
-             item.key === BUILDING_TYPES.TRAINING_CENTER ? "🎓" :
-             item.key === BUILDING_TYPES.FARM ? "🌾" :
-             item.key === BUILDING_TYPES.LUMBERYARD ? "🪵" : "🏠"}
-          </div>
-        )}
-      </div>
-      <div>
-        <div style={{ fontWeight: 700, fontSize: 11 }}>{item.label}</div>
-        <div style={{ opacity: 0.85, marginTop: 1, fontSize: 9 }}>
-          Cost: {`${BUILDING_COSTS[item.key] || 0}g`}
-        </div>
-      </div>
-      <button
-        onClick={() => onPick(item.key, isDefense)}
-        disabled={!canAfford(item.key)}
-        style={{
-          padding: "4px 6px",
-          borderRadius: 4,
-          background: canAfford(item.key) ? "#2e7d32" : "#333",
-          border: canAfford(item.key)
-            ? "1px solid #3fa143"
-            : "1px solid #555",
-          color: "#fff",
+          gap: 2,
+          padding: 6,
+          background: getBackgroundColor(),
+          borderRadius: 6,
+          border: isSelected
+            ? "2px solid #4caf50"
+            : `1px solid ${getBorderColor()}`,
+          opacity: canAfford(item.key) ? 1 : 0.7,
+          textAlign: "center",
+          boxShadow: isSelected ? "0 0 8px rgba(76, 175, 80, 0.5)" : "none",
+          transition: "all 0.2s ease",
           cursor: canAfford(item.key) ? "pointer" : "default",
-          fontSize: 10,
-          minWidth: 50
         }}
-        title={canAfford(item.key) ? 
-          "Place building" : 
-          "Not enough gold"}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        Place
-      </button>
-    </div>
-  );
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            background: "#111",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 4,
+            border: "1px solid #333",
+          }}
+        >
+          {isDefense ? (
+            <div style={{ fontSize: 24 }}>{item.img}</div>
+          ) : item.hasImage ? (
+            <img
+              src={item.img}
+              width={32}
+              height={32}
+              style={{ imageRendering: "pixelated", objectFit: "cover" }}
+              onError={(e) => {
+                // Fallback to emoji if image fails to load
+                e.target.style.display = "none";
+                const fallback =
+                  e.target.parentNode.querySelector(".fallback-emoji");
+                if (fallback) fallback.style.display = "block";
+              }}
+            />
+          ) : (
+            <div style={{ fontSize: 24 }}>{item.img}</div>
+          )}
+          {/* Fallback emoji for failed images */}
+          {!isDefense && item.hasImage && (
+            <div
+              className="fallback-emoji"
+              style={{
+                display: "none",
+                fontSize: 24,
+                width: 32,
+                height: 32,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {item.key === BUILDING_TYPES.HOUSE
+                ? "🏠"
+                : item.key === BUILDING_TYPES.TRAINING_CENTER
+                ? "🎓"
+                : item.key === BUILDING_TYPES.FARM
+                ? "🌾"
+                : item.key === BUILDING_TYPES.LUMBERYARD
+                ? "🪵"
+                : "🏠"}
+            </div>
+          )}
+        </div>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 11 }}>{item.label}</div>
+          <div style={{ opacity: 0.85, marginTop: 1, fontSize: 9 }}>
+            Cost: {`${BUILDING_COSTS[item.key] || 0}g`}
+          </div>
+        </div>
+        <button
+          onClick={() => onPick(item.key, isDefense)}
+          disabled={!canAfford(item.key)}
+          style={{
+            padding: "4px 6px",
+            borderRadius: 4,
+            background: canAfford(item.key) ? "#2e7d32" : "#333",
+            border: canAfford(item.key)
+              ? "1px solid #3fa143"
+              : "1px solid #555",
+            color: "#fff",
+            cursor: canAfford(item.key) ? "pointer" : "default",
+            fontSize: 10,
+            minWidth: 50,
+          }}
+          title={canAfford(item.key) ? "Place building" : "Not enough gold"}
+        >
+          Place
+        </button>
+      </div>
+    );
+  };
 
   const ConstructionTabBar = () => (
     <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
@@ -257,12 +361,13 @@ function ConstructionPanel() {
         style={{
           padding: "6px 10px",
           borderRadius: 4,
-          border: constructionTab === "city" ? "1px solid #4caf50" : "1px solid #444",
+          border:
+            constructionTab === "city" ? "1px solid #4caf50" : "1px solid #444",
           background: constructionTab === "city" ? "#2e7d32" : "#222",
           color: "#fff",
           cursor: "pointer",
           fontWeight: 600,
-          fontSize: 11
+          fontSize: 11,
         }}
       >
         🏗️ City Building
@@ -272,12 +377,15 @@ function ConstructionPanel() {
         style={{
           padding: "6px 10px",
           borderRadius: 4,
-          border: constructionTab === "defense" ? "1px solid #f44336" : "1px solid #444",
+          border:
+            constructionTab === "defense"
+              ? "1px solid #f44336"
+              : "1px solid #444",
           background: constructionTab === "defense" ? "#d32f2f" : "#222",
           color: "#fff",
           cursor: "pointer",
           fontWeight: 600,
-          fontSize: 11
+          fontSize: 11,
         }}
       >
         🛡️ Defense
@@ -288,7 +396,7 @@ function ConstructionPanel() {
   return (
     <PanelContainer title="Construction">
       <ConstructionTabBar />
-      
+
       {constructionTab === "city" && (
         <div
           style={{
@@ -322,7 +430,14 @@ function ConstructionPanel() {
 
 function PeoplePanel() {
   const p = GameModel.population;
-  const { villager, farmerEmployed, foresterEmployed, minerEmployed, fishermanEmployed, villagerEmployed } = useMemo(() => {
+  const {
+    villager,
+    farmerEmployed,
+    foresterEmployed,
+    minerEmployed,
+    fishermanEmployed,
+    villagerEmployed,
+  } = useMemo(() => {
     const grid = GameModel.gridData || [];
     let totalVillagers = 0;
     let eVillager = 0;
@@ -345,7 +460,14 @@ function PeoplePanel() {
         }
       }
     }
-    return { villager: totalVillagers, villagerEmployed: eVillager, farmerEmployed: eFarmer, foresterEmployed: eForester, minerEmployed: eMiner, fishermanEmployed: eFisherman };
+    return {
+      villager: totalVillagers,
+      villagerEmployed: eVillager,
+      farmerEmployed: eFarmer,
+      foresterEmployed: eForester,
+      minerEmployed: eMiner,
+      fishermanEmployed: eFisherman,
+    };
   }, [GameModel.gridData, GameModel.population.current]);
 
   const farmerTotal = GameModel.professions.farmer || 0;
@@ -355,19 +477,61 @@ function PeoplePanel() {
 
   const villagerUnemp = Math.max(0, (villager || 0) - (villagerEmployed || 0));
   const farmerUnemp = Math.max(0, (farmerTotal || 0) - (farmerEmployed || 0));
-  const foresterUnemp = Math.max(0, (foresterTotal || 0) - (foresterEmployed || 0));
+  const foresterUnemp = Math.max(
+    0,
+    (foresterTotal || 0) - (foresterEmployed || 0)
+  );
   const minerUnemp = Math.max(0, (minerTotal || 0) - (minerEmployed || 0));
-  const fishermanUnemp = Math.max(0, (fishermanTotal || 0) - (fishermanEmployed || 0));
+  const fishermanUnemp = Math.max(
+    0,
+    (fishermanTotal || 0) - (fishermanEmployed || 0)
+  );
 
   return (
     <PanelContainer title="People Management">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
-        <PeopleStat icon="👥" label="Population" value={`${p.current}/${p.cap}`} sub={"Total / Cap"} />
-        <PeopleStat icon="🧑" label="Villagers" value={String(villager)} sub={`Empl: ${villagerEmployed}  Unempl: ${villagerUnemp}`} />
-        <PeopleStat icon="👨‍🌾" label="Farmers" value={String(farmerTotal)} sub={`Empl: ${farmerEmployed}  Unempl: ${farmerUnemp}`} />
-        <PeopleStat icon="🌲" label="Foresters" value={String(foresterTotal)} sub={`Empl: ${foresterEmployed}  Unempl: ${foresterUnemp}`} />
-        <PeopleStat icon="⛏️" label="Miners" value={String(minerTotal)} sub={`Empl: ${minerEmployed}  Unempl: ${minerUnemp}`} />
-        <PeopleStat icon="🎣" label="Fishermen" value={String(fishermanTotal)} sub={`Empl: ${fishermanEmployed}  Unempl: ${fishermanUnemp}`} />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, 1fr)",
+          gap: 6,
+        }}
+      >
+        <PeopleStat
+          icon="👥"
+          label="Population"
+          value={`${p.current}/${p.cap}`}
+          sub={"Total / Cap"}
+        />
+        <PeopleStat
+          icon="🧑"
+          label="Villagers"
+          value={String(villager)}
+          sub={`Empl: ${villagerEmployed}  Unempl: ${villagerUnemp}`}
+        />
+        <PeopleStat
+          icon="👨‍🌾"
+          label="Farmers"
+          value={String(farmerTotal)}
+          sub={`Empl: ${farmerEmployed}  Unempl: ${farmerUnemp}`}
+        />
+        <PeopleStat
+          icon="🌲"
+          label="Foresters"
+          value={String(foresterTotal)}
+          sub={`Empl: ${foresterEmployed}  Unempl: ${foresterUnemp}`}
+        />
+        <PeopleStat
+          icon="⛏️"
+          label="Miners"
+          value={String(minerTotal)}
+          sub={`Empl: ${minerEmployed}  Unempl: ${minerUnemp}`}
+        />
+        <PeopleStat
+          icon="🎣"
+          label="Fishermen"
+          value={String(fishermanTotal)}
+          sub={`Empl: ${fishermanEmployed}  Unempl: ${fishermanUnemp}`}
+        />
       </div>
     </PanelContainer>
   );
@@ -387,7 +551,14 @@ function PeopleStat({ icon, label, value, sub }) {
       }}
     >
       <div style={{ fontSize: 16, width: 24, textAlign: "center" }}>{icon}</div>
-      <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          flex: 1,
+        }}
+      >
         <div style={{ fontWeight: 700, fontSize: 11 }}>{label}</div>
         <div style={{ opacity: 0.85, fontSize: 10 }}>{value}</div>
         {sub ? (
@@ -412,43 +583,149 @@ function ResourcesPanel() {
   return (
     <PanelContainer title="Resources">
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
-        <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, padding: 6 }}>
-          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 11 }}>Global resources</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
+        <div
+          style={{
+            background: "#1a1a1a",
+            border: "1px solid #333",
+            borderRadius: 6,
+            padding: 6,
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 11 }}>
+            Global resources
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 6,
+            }}
+          >
             {items.map((it) => (
-              <div key={it.key} style={{ display: "flex", gap: 6, alignItems: "center", background: "#111", border: "1px solid #333", borderRadius: 4, padding: 4 }}>
-                <div style={{ fontSize: 16, width: 20, textAlign: "center" }}>{it.icon}</div>
+              <div
+                key={it.key}
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  alignItems: "center",
+                  background: "#111",
+                  border: "1px solid #333",
+                  borderRadius: 4,
+                  padding: 4,
+                }}
+              >
+                <div style={{ fontSize: 16, width: 20, textAlign: "center" }}>
+                  {it.icon}
+                </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 10 }}>{it.label}</div>
-                  <div style={{ opacity: 0.85, fontSize: 9 }}>{Number(it.value).toFixed(1)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 10 }}>
+                    {it.label}
+                  </div>
+                  <div style={{ opacity: 0.85, fontSize: 9 }}>
+                    {Number(it.value).toFixed(1)}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, padding: 6 }}>
-          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 11 }}>Inside warehouses</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
-            {[{key: 'wood', label: 'Wood', icon: '🪵'}, {key:'wheat', label:'Wheat', icon:'🌾'}, {key:'stone', label:'Stone', icon:'🪨'}, {key:'fish', label:'Fish', icon:'🐟'}].map(it => (
-              <div key={it.key} style={{ display: "flex", gap: 6, alignItems: "center", background: "#111", border: "1px solid #333", borderRadius: 4, padding: 4 }}>
-                <div style={{ fontSize: 16, width: 20, textAlign: "center" }}>{it.icon}</div>
+        <div
+          style={{
+            background: "#1a1a1a",
+            border: "1px solid #333",
+            borderRadius: 6,
+            padding: 6,
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 11 }}>
+            Inside warehouses
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 6,
+            }}
+          >
+            {[
+              { key: "wood", label: "Wood", icon: "🪵" },
+              { key: "wheat", label: "Wheat", icon: "🌾" },
+              { key: "stone", label: "Stone", icon: "🪨" },
+              { key: "fish", label: "Fish", icon: "🐟" },
+            ].map((it) => (
+              <div
+                key={it.key}
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  alignItems: "center",
+                  background: "#111",
+                  border: "1px solid #333",
+                  borderRadius: 4,
+                  padding: 4,
+                }}
+              >
+                <div style={{ fontSize: 16, width: 20, textAlign: "center" }}>
+                  {it.icon}
+                </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 10 }}>{it.label}</div>
-                  <div style={{ opacity: 0.85, fontSize: 9 }}>{Number(whTotals[it.key] || 0).toFixed(1)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 10 }}>
+                    {it.label}
+                  </div>
+                  <div style={{ opacity: 0.85, fontSize: 9 }}>
+                    {Number(whTotals[it.key] || 0).toFixed(1)}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, padding: 6 }}>
-          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 11 }}>In production buildings</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
-            {[{key: 'wood', label: 'Wood', icon: '🪵'}, {key:'wheat', label:'Wheat', icon:'🌾'}, {key:'stone', label:'Stone', icon:'🪨'}, {key:'fish', label:'Fish', icon:'🐟'}].map(it => (
-              <div key={it.key} style={{ display: "flex", gap: 6, alignItems: "center", background: "#111", border: "1px solid #333", borderRadius: 4, padding: 4 }}>
-                <div style={{ fontSize: 16, width: 20, textAlign: "center" }}>{it.icon}</div>
+        <div
+          style={{
+            background: "#1a1a1a",
+            border: "1px solid #333",
+            borderRadius: 6,
+            padding: 6,
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 11 }}>
+            In production buildings
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 6,
+            }}
+          >
+            {[
+              { key: "wood", label: "Wood", icon: "🪵" },
+              { key: "wheat", label: "Wheat", icon: "🌾" },
+              { key: "stone", label: "Stone", icon: "🪨" },
+              { key: "fish", label: "Fish", icon: "🐟" },
+            ].map((it) => (
+              <div
+                key={it.key}
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  alignItems: "center",
+                  background: "#111",
+                  border: "1px solid #333",
+                  borderRadius: 4,
+                  padding: 4,
+                }}
+              >
+                <div style={{ fontSize: 16, width: 20, textAlign: "center" }}>
+                  {it.icon}
+                </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 10 }}>{it.label}</div>
-                  <div style={{ opacity: 0.85, fontSize: 9 }}>{Number(productionTotals[it.key] || 0).toFixed(1)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 10 }}>
+                    {it.label}
+                  </div>
+                  <div style={{ opacity: 0.85, fontSize: 9 }}>
+                    {Number(productionTotals[it.key] || 0).toFixed(1)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -467,7 +744,8 @@ function collectWarehouses() {
     if (!row) continue;
     for (let x = 0; x < (row?.length || 0); x++) {
       const c = row[x];
-      if (c?.buildingType === BUILDING_TYPES.WAREHOUSE && c.root === c) list.push(c);
+      if (c?.buildingType === BUILDING_TYPES.WAREHOUSE && c.root === c)
+        list.push(c);
     }
   }
   return list;
@@ -475,7 +753,7 @@ function collectWarehouses() {
 
 function sumWarehouseResources(wares) {
   const sum = { wood: 0, stone: 0, wheat: 0, fish: 0 };
-  wares.forEach(w => {
+  wares.forEach((w) => {
     const s = w.data?.storage || {};
     sum.wood += s.wood || 0;
     sum.stone += s.stone || 0;
@@ -488,14 +766,14 @@ function sumWarehouseResources(wares) {
 function collectProductionBuildingResources() {
   const grid = GameModel.gridData || [];
   const sum = { wood: 0, stone: 0, wheat: 0, fish: 0 };
-  
+
   for (let y = 0; y < grid.length; y++) {
     const row = grid[y];
     if (!row) continue;
     for (let x = 0; x < row.length; x++) {
       const cell = row[x];
       if (!cell || !cell.root || cell.root !== cell) continue;
-      
+
       // Check each production building type
       if (cell.buildingType === BUILDING_TYPES.LUMBERYARD) {
         sum.wood += cell.data?.availableToDeliver || 0;
@@ -508,11 +786,16 @@ function collectProductionBuildingResources() {
       }
     }
   }
-  
+
   return sum;
 }
 
-function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }) {
+function AdminPanel({
+  adminMode,
+  setAdminMode,
+  adminTileType,
+  setAdminTileType,
+}) {
   const scene = window.__phaserScene;
 
   useEffect(() => {
@@ -558,7 +841,7 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
     color: "#fff",
     cursor: "pointer",
     fontSize: 10,
-    minWidth: 70
+    minWidth: 70,
   };
 
   const typeBtn = (t, label, color) => (
@@ -573,7 +856,7 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
         color: label === "Plains" ? "#ddd" : "#fff",
         cursor: "pointer",
         minWidth: 70,
-        fontSize: 10
+        fontSize: 10,
       }}
       title={`Set assignment to ${label}`}
     >
@@ -584,7 +867,14 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
   return (
     <PanelContainer title="Admin Mode">
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <button style={btn} onClick={startAssign}>
             Assign tile
           </button>
@@ -594,11 +884,14 @@ function AdminPanel({ adminMode, setAdminMode, adminTileType, setAdminTileType }
           <button style={btn} onClick={launchAttack}>
             Launch attack
           </button>
-          <button style={btn} onClick={() => {
-            if (window.__questSystem) {
-              window.__questSystem.triggerQuest("first_warehouse_delivery");
-            }
-          }}>
+          <button
+            style={btn}
+            onClick={() => {
+              if (window.__questSystem) {
+                window.__questSystem.triggerQuest("first_warehouse_delivery");
+              }
+            }}
+          >
             Test Quest
           </button>
         </div>
