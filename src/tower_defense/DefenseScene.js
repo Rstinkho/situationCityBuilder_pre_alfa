@@ -17,11 +17,11 @@ export default class DefenseScene extends Phaser.Scene {
 
   preload() {
     // Load tower defense spritesheets
-    this.load.spritesheet("tower_defense", "src/buildings_logic/tower_idle.png", {
+    this.load.spritesheet("tower_defense", "/assets/tower_idle.png", {
       frameWidth: 60,
       frameHeight: 88,
     });
-    this.load.spritesheet("attacker_walk", "src/assets/characters/attacker_walk.png", {
+    this.load.spritesheet("attacker_walk", "/assets/attacker_walk.png", {
       frameWidth: 30,
       frameHeight: 44,
     });
